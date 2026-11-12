@@ -36,7 +36,8 @@ tests.
 - **Affected Modules / Directories**:
   - `.github/workflows/ci.yml`: the workflow, which only calls the scripts (template in Technical
     Design, section 2)
-  - `ci/`: `ci_common.py`, `check-docs`, `check-policy`, `affects-code`, and `summary`
+  - `ci/`: `ci_common.py`, `check-docs`, `check-policy`, `summary`, and, only with a slow stage,
+    `affects-code` (FR-07)
   - `ci/tests/`: tests for the scripts
   - `ci/.gitignore`: ignores `__pycache__/`
 - **Applicable Mandatory ADRs**:
@@ -88,8 +89,8 @@ tests.
 
   Every FR-02 violation names SPEC-0001 as its source, except the owner check, which names ADR-0001. A
   duplicated number or `id` is reported on each file involved. A document whose front matter does not
-  parse gets that one violation: its other checks are skipped, and its `id` does not count for
-  references. A `template.md` whose front matter does not parse is a violation located at that file.
+  parse gets that violation, and the checks that read the front matter are skipped; the file name and
+  number checks still apply, and its `id` does not count for references. A `template.md` whose front matter does not parse is a violation located at that file.
 - **FR-03**: **Policy** stage (`check-policy`), workflow rules
   ([ADR-0003](../adrs/0003-use-github-actions-for-ci.md), rules 2 to 5). For every `.yml` or `.yaml` file
   at the top level of `.github/workflows/`, read as described in section 2, it must check that:
@@ -117,7 +118,8 @@ tests.
     covers the check instead. With `--offline`, the call is skipped and the note reads
     `repository settings not checked (--offline)`.
   - Any other failure (a 5xx or 429 answer, an exhausted rate limit, a network error, or a response that
-    is not JSON) is an execution error (exit `2`).
+    is not JSON) is an execution error (exit `2`). A rate limit shows as a 429, or as a 403 with the
+    header `x-ratelimit-remaining: 0` or with `rate limit` in its message.
 - **FR-05**: **Policy** stage, project rules. Each project ADR whose compliance section calls for an
   automated check adds that rule to the project's `check-policy`, and every violation names that ADR as
   its source.
@@ -175,9 +177,9 @@ tests.
   (FR-07). Pull request runs share one concurrency group per pull request and cancel the previous run;
   every other run gets a group of its own and is never cancelled, so no run for a push to `main` is lost
   (ADR-0003, rule 7). The exact expression is in the template.
-- **NFR-03 (Reproducibility)**: scripts use only the Python 3.10+ standard library and produce the same
+- **NFR-03 (Reproducibility)**: scripts use only the Python 3.12+ standard library and produce the same
   result locally as in CI. Jobs run on `ubuntu-24.04` with the system `python3`, without
-  `actions/setup-python`.
+  `actions/setup-python`; that Python is 3.12, so every run also checks the minimum version.
 - **NFR-04 (Security)**: ADR-0003, rules 2 to 5 and 8. `GITHUB_TOKEN` is passed as an environment
   variable only to the `check-policy` step; checkouts use the action's default token without persisting
   it. `GITHUB_TOKEN` is not a repository secret: on pull requests from forks it is read-only, and
@@ -463,8 +465,10 @@ Incremental, verifiable implementation steps:
     every run;
   - AC-06: the `summary` tests for gated stages skipped because no code was affected and, where
     `affects-code` exists, its tests for a change under `docs/` only;
-  - AC-08: a local run of each script on the pull request's head commit, compared with that commit's CI
-    log;
+  - AC-08: a local run of each script on the pull request's head commit, compared with the CI log of
+    that commit's run. A pull request run tests the merge of the head into `main`
+    (`refs/pull/<n>/merge`), so the comparison holds while that merge has the head's tree; otherwise,
+    merge `main` into the branch first (ADR-0002, rule 5);
   - AC-09: the `on:` block of the workflow (FR-01) and, where `affects-code` exists, its tests for
     `schedule` and `workflow_dispatch`; without it, every stage runs on every event.
 - **Manual Verification**: compare a local run of each script with the CI log of the same commit (AC-08);

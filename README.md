@@ -51,7 +51,8 @@ project's own documents, which it accepts, implements, and keeps up to date
 
 This section is the only place that describes how doc2gh is added to a project and kept up
 to date. doc2gh lives in the project's `docs/` directory as a git subtree, because the
-SPEC-0001 checks expect the document types in `docs/<type>/`.
+SPEC-0001 checks expect the document types in `docs/<type>/`. `docs/LICENSE` is doc2gh's
+license: it covers the files that come from doc2gh, not the project.
 
 ### Rules
 
@@ -97,25 +98,37 @@ is the only direct push to `main` (ADR-0002, rule 8).
 3. Add two commits on the same branch:
    - **Accept the documents**: ADR-0001 to ADR-0003 go to `accepted` and SPEC-0001 to `ready`.
      In those four documents and in both Runbooks, `deciders` and `owners` hold the adopting
-     person's login (`gh api user --jq .login`) unless they named other people, and
-     `updated_at` is today's date. The Runbooks stay `draft`.
+     person's login (`gh api user --jq .login`) unless they named other people, `updated_at`
+     is today's date, and `created_at` keeps doc2gh's date. The Runbooks stay `draft`.
    - **Add the AI agent instruction file** ([AI agent instructions](#ai-agent-instructions)).
-4. Open the adoption pull request:
+4. Open the adoption pull request, replacing the two placeholders with the outputs of
+   RUNBOOK-0001, Step 1:
 
    ```bash
    git push -u origin chore/adopt-docs-framework
-   gh pr create --base main --title "Adopt the documentation framework" \
-     --body "Adds doc2gh (main) to docs/, accepts ADR-0001 to ADR-0003, and moves SPEC-0001 to ready (ADR-0001, rule 8). Settings before RUNBOOK-0001, Step 2: <Step 1 output>."
+   gh pr create --base main --title "Adopt the documentation framework" --body-file - <<'EOF'
+   Adds doc2gh (main) to docs/, accepts ADR-0001 to ADR-0003, moves SPEC-0001 to ready, updates
+   the front matter of RUNBOOK-0001 and RUNBOOK-0002, and adds the AI agent instruction file
+   (ADR-0001, rule 8).
+
+   RUNBOOK-0001, Steps 1 to 3, ran before this pull request. For the rollback, the settings
+   before Step 2 were `<merge settings JSON>`, and the protection of `main` answered
+   <protection JSON | Branch not protected | the "Upgrade to GitHub Pro" message>.
+   EOF
    ```
 
    The person reviews it and merges it with a merge commit
    (`gh pr merge <pr-number> --merge --delete-branch`). That merge approves the documents.
 5. From a `ci/ci-pipeline` branch cut from the updated `main`, open the implementation pull
-   request as a draft (`gh pr create --draft`). It builds [SPEC-0001](specs/0001-ci-pipeline.md),
-   protects `main` once its first run passes (SPEC-0001, Task 5), runs the Verification of
-   RUNBOOK-0001, and verifies every criterion in its own runs. Its last commit moves SPEC-0001 to
-   `done` and RUNBOOK-0001 to `active`; once that commit's run passes, the pull request leaves
-   draft (`gh pr ready <pr-number>`), and the person merges it the same way.
+   request as a draft (`gh pr create --draft --title "Build the CI pipeline (SPEC-0001)"`). It
+   builds [SPEC-0001](specs/0001-ci-pipeline.md), protects `main` once its first run passes
+   (SPEC-0001, Task 5), runs the Verification of RUNBOOK-0001, and verifies every criterion in
+   its own runs. Each task is ticked in the commit that completes it. The last commit ticks the
+   acceptance criteria and moves SPEC-0001 to `done` and RUNBOOK-0001 to `active`; once that
+   commit's run passes, the pull request leaves draft (`gh pr ready <pr-number>`), and the person
+   merges it the same way. Its description lists each task and criterion with its evidence, the
+   result of RUNBOOK-0001's Verification, the NFR-01 measurements (SPEC-0001, Task 6), and
+   RUNBOOK-0002 when Task 7 changes it (ADR-0001, rule 4).
 
 After the second merge, adoption is complete and no pull request is pending. RUNBOOK-0002
 becomes `active` in the pull request that fixes the first CI failure diagnosed with it, which
@@ -148,8 +161,9 @@ If the pull stops on a conflict, resolve it file by file, then run
 `git add docs && git commit --no-edit --cleanup=strip`:
 
 - framework files (`README.md`, `template.md`): take doc2gh's version;
-- documents that ship with doc2gh: keep the project's front matter and take doc2gh's new text.
-  Carry ticks over by content, not by number: a task or criterion whose text changed goes back
+- documents that ship with doc2gh: keep the project's front matter and take doc2gh's new text,
+  then re-apply the project's own changes to the body that the new text does not already cover
+  (such as RUNBOOK-0002 fixes from SPEC-0001, Task 7). Carry ticks over by content, not by number: a task or criterion whose text changed goes back
   to `[ ]` until a later pull request checks it again (ADR-0001, rule 2).
 
 If a conflict does not fit these rules, run `git merge --abort`.
@@ -187,7 +201,9 @@ stops only:
 - when a pull request is ready for review, for the person to review and merge it: the adoption
   pull request as soon as it is open, the implementation pull request once it leaves draft. The
   agent follows the adoption pull request (`gh pr view <pr-number> --json state`) and goes on to
-  the implementation pull request as soon as it is merged, without waiting for a new request;
+  the implementation pull request as soon as it is merged, without waiting for a new request.
+  An agent that cannot keep running ends its turn with the pull request's link and, when it
+  resumes, checks that the state is `MERGED` before going on;
 - at the stop conditions of the documents it follows.
 
 The agent writes the project's instruction file itself (the file its `/init` command would
@@ -201,10 +217,10 @@ other guidance, the file records:
    [Recommended Workflow](#recommended-workflow).
 2. The agent prepares pull requests; a person reviews and merges them, and the merge is the
    approval (ADR-0001, rule 2).
-3. The file points to `docs/README.md` (this file) and cites documents by ID instead of copying
-   their rules (ADR-0001, rule 6). It records no status, ticked task, remote, or anything else
-   that changes as the work moves on, so it never needs a pull request of its own to stay
-   correct.
+
+The file points to `docs/README.md` (this file) and cites documents by ID instead of copying
+their rules (ADR-0001, rule 6). It records no status, ticked task, remote, or anything else that
+changes as the work moves on, so it never needs a pull request of its own to stay correct.
 
 ## Recommended Workflow
 

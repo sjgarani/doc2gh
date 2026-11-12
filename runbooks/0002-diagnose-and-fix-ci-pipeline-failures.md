@@ -32,7 +32,7 @@ tags: [ci, github-actions, troubleshooting]
 
 - **Access & Permissions**: read access to the repository and its GitHub Actions runs; write access to
   re-run jobs and open pull requests.
-- **Tools**: `git`, `gh` authenticated (`gh auth status`), and Python 3.10 or later.
+- **Tools**: `git`, `gh` authenticated (`gh auth status`), and Python 3.12 or later.
 - **Approvals**: none to diagnose; fixes follow the
   [ADR-0002](../adrs/0002-branching-and-merge-workflow.md) workflow.
 - **Credentials**: only the `gh` login. Never paste tokens into commands, logs, or pull requests.
@@ -60,8 +60,8 @@ Execute the steps in order. If a result differs from the **Expected result**, st
   gh run list --workflow ci.yml --branch main --limit 5 # on main, scheduled, or manual
   gh run view <run-id>
   ```
-- **Expected result**: the name of the failing job (`Changes`, `Documentation`, `Policy`, `Summary`, or
-  a project stage). The **Summary** job's table lists every stage by job ID (`changes`, `docs`,
+- **Expected result**: the name of the failing job (`Documentation`, `Policy`, `Summary`, `Changes`
+  where the project has it, or a project stage). The **Summary** job's table lists every stage by job ID (`changes`, `docs`,
   `policy`, and so on), whether it is required, and its result.
 - **On failure**: if there is no run for the commit (the workflow never triggered), check that the pull
   request targets `main` and that `.github/workflows/ci.yml` exists on the branch; see
@@ -73,11 +73,13 @@ Execute the steps in order. If a result differs from the **Expected result**, st
   ```bash
   gh run view <run-id> --log-failed
   ```
-- **Expected result**: lines formatted as `[<source document>] <file>[:<line>]: <message>` (SPEC-0001,
-  Technical Design, section 2). The source document tells you which rule applies. Exit code `1` means a
-  violation; `2` means the script itself failed to run.
-- **On failure**: if no line has that format, the failure is outside the scripts (checkout, network, or
-  GitHub infrastructure); go to Step 5.
+- **Expected result**: lines formatted as `[<source document>] <location>[:<line>]: <message>`, where the
+  location is a file, `repos/<owner>/<repo>`, or `branch <name>` (SPEC-0001, Technical Design,
+  section 2). The source document tells you which rule applies. Exit code `1` means a violation; `2`
+  means the script itself failed to run.
+- **On failure**: a failing test in the **Policy** job's `unittest` step has no such line; go to Step 3
+  and use the `ci/tests/` row of Step 4. Otherwise, if no line has that format, the failure is outside
+  the scripts (checkout, network, or GitHub infrastructure); go to Step 5.
 
 ### Step 3: Reproduce locally
 
@@ -86,9 +88,11 @@ Execute the steps in order. If a result differs from the **Expected result**, st
   git fetch origin && git switch <pr-branch>
   ci/check-docs
   ci/check-policy
+  GITHUB_EVENT_NAME=pull_request GITHUB_HEAD_REF=<pr-branch> ci/check-policy --offline  # branch name
   python3 -m unittest discover --start-directory ci/tests
   ```
-- **Expected result**: the same violations as in CI (SPEC-0001, AC-08).
+- **Expected result**: the same violations as in CI (SPEC-0001, AC-08). The branch name is checked only
+  on a `pull_request` event (SPEC-0001, FR-10), hence the second `check-policy` run.
 - **On failure**: a different result points to local state that differs from the commit (untracked
   files, a submodule on another commit) or to an environment difference; note it and, if nothing
   explains it, see [Escalation](#escalation).
@@ -101,13 +105,14 @@ Execute the steps in order. If a result differs from the **Expected result**, st
 | Source | Typical message | Fix |
 | :--- | :--- | :--- |
 | SPEC-0001 (`check-docs`) | bad file name, `id` not matching the file, invalid status, missing field, H1, unknown reference, broken link | Bring the document in line with its type's `template.md` and `README.md` under `docs/`. |
+| SPEC-0001 (`check-policy`, workflows) | step or `with:` written as a flow mapping, file not valid UTF-8 | Write steps and `with:` blocks in block style, in UTF-8. |
 | ADR-0003 (`check-policy`, workflows) | `permissions` other than `contents: read`, action not pinned by SHA or without a version comment, `pull_request_target` with a checkout, checkout without `persist-credentials: false` | Set top-level `permissions` to `contents: read`; pin the action to the SHA of its latest tag (`gh api repos/<owner>/<action>/releases/latest --jq .tag_name`, then `gh api repos/<owner>/<action>/commits/<tag> --jq .sha`) with the tag in a comment; drop `pull_request_target`; add `persist-credentials: false`. |
 | ADR-0002 (`check-policy`, settings) | merge settings mismatch | Follow [RUNBOOK-0001](0001-configure-the-github-repository.md). |
 | ADR-0002 (`check-policy`, branch) | branch name outside `<type>/<short-topic>` | Rename the branch (`gh api -X POST repos/<owner>/<repo>/branches/<branch>/rename -f new_name=<type>/<short-topic>`), which updates the open pull request. |
 | `check-policy` (exit `2`) | cannot tell which GitHub repository to read | Locally, set `GITHUB_REPOSITORY=<owner>/<repo>` or run with `--offline`; in CI, GitHub always sets `GITHUB_REPOSITORY`. |
 | Project ADR or Spec | a project-specific rule or project stage | Fix as the cited document describes. |
 | API error (exit `2`) | GitHub API call failed | Check the rate limit (`gh api rate_limit --jq .resources.core`) and GitHub's status; re-run in Step 5. |
-| `Changes` job | commits could not be compared | The job runs the slow stages to be safe; check `fetch-depth: 0` on that job's checkout. |
+| `Changes` job, where it exists | commits could not be compared | The job runs the slow stages to be safe; check `fetch-depth: 0` on that job's checkout. |
 | `ci/tests/` tests | failing test | A bug in the `ci/` scripts: fix the script, not the test, unless the test itself is wrong. |
 
 - **Expected result**: Step 3 reports no violations.

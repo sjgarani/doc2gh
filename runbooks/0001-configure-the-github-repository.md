@@ -71,7 +71,8 @@ Execute the steps in order. If a result differs from the **Expected result**, st
 - **Expected result**: all five fields filled in; keep them for the rollback (during adoption, in the
   adoption pull request's description). The second call returns
   the current protection, `Branch not protected` (HTTP 404), or "Upgrade to GitHub Pro or make this
-  repository public to enable this feature." (HTTP 403); note which one.
+  repository public to enable this feature." (HTTP 403); note which one. With 404 or 403, `gh`
+  exits with status 1, so run the two calls separately rather than chained with `&&`.
 - **On failure**: missing or `null` merge fields mean you lack admin rights; see
   [Escalation](#escalation).
 
@@ -130,15 +131,13 @@ Execute the steps in order. If a result differs from the **Expected result**, st
 ## Verification
 
 - The merge settings match Step 2 and, with protection, the `contexts` match Step 4 and `admins` is
-  `true`:
+  `true`. Without protection (Step 3), skip the second call, which answers 403 again:
   ```bash
   gh api repos/<owner>/<repo> \
     --jq '{allow_merge_commit, allow_squash_merge, allow_rebase_merge, delete_branch_on_merge}'
   gh api repos/<owner>/<repo>/branches/main/protection \
     --jq '{contexts: .required_status_checks.contexts, admins: .enforce_admins.enabled}'
   ```
-- On an open pull request, "Create a merge commit" is the only merge option and, with protection, the
-  required stages are marked "Required".
 - Locally, with an admin's credentials, `GITHUB_TOKEN=$(gh auth token) ci/check-policy`
   reports no `[ADR-0002]` violation and no `repository settings not checked` note.
 
