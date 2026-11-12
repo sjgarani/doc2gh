@@ -103,8 +103,7 @@ Rules:
    separate commits. The pull request that first brings doc2gh in also carries what
    [ADR-0001](0001-link-the-documentation-framework-to-github.md), rule 8, puts in it.
 7. Commit messages and pull request titles and descriptions are written in English. A commit subject is
-   imperative and at most 72 characters; the body, when there is one, explains why. Documentation follows
-   the language of the adopted framework (ADR-0001, rule 1).
+   imperative and at most 72 characters; the body, when there is one, explains why.
 8. Pushing directly to `main` is forbidden. The only exception is the first commit of a new repository,
    which creates `main` so that pull requests have a base. When the GitHub plan offers branch protection,
    the protection on `main` requires a pull request (ADR-0003, rule 6).

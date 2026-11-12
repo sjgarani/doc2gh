@@ -88,7 +88,7 @@ the task list.
 
 Rules:
 1. Documents live in `docs/<type>/`, in the project repository and in the same history as the code, and
-   are written in the language of the adopted framework.
+   are written in English.
 2. The project's review workflow is a pull request to `main` (ADR-0002). New documents, content changes,
    and status changes all go through a pull request, and the merge records the review. No document
    reaches an approval status (`approved`, `accepted`, `ready`, or `active`) without one. The pull
@@ -163,9 +163,9 @@ How the framework maps to GitHub:
 
 > This section instructs AI coding assistants and human reviewers on how to verify that repository code complies with this architectural decision.
 
-- **Mandatory Patterns**: documents in `docs/<type>/`, created from the type's `template.md`, in the
-  language of the adopted framework, with the next free ID; pull requests that list the IDs of the documents
-  involved; owners written as `@login`; cross-references by ID.
+- **Mandatory Patterns**: documents in `docs/<type>/`, created from the type's `template.md`, in
+  English, with the next free ID; pull requests that list the IDs of the documents involved; owners
+  written as `@login`; cross-references by ID.
 - **Forbidden Patterns**: changing a document's status outside a pull request; project documents outside
   `docs/` or in the wiki; the same definition written in two documents.
 - **Automated Verification**: the documentation stage of SPEC-0001 (FR-02). Reviewers check that pull
