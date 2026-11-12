@@ -17,6 +17,7 @@ project that uses them.
 - Gather feedback on proposed changes before implementation.
 - Turn requirements and decisions into actionable specifications.
 - Document operational procedures that people and AI agents can execute safely.
+- Keep project knowledge compiled and current in a wiki maintained by AI agents.
 - Maintain traceability between related documents and implementation work.
 - Support planning, progress tracking, and review.
 
@@ -27,6 +28,7 @@ project that uses them.
 - [`adrs/`](adrs/): Architecture Decision Records that explain important technical choices.
 - [`specs/`](specs/): Technical and functional specifications that guide implementation.
 - [`runbooks/`](runbooks/): Step-by-step procedures for recurring operations, maintenance, and incident response.
+- [`wiki/`](wiki/): LLM Wiki that compiles the project's sources and documents into interlinked pages that an AI agent maintains.
 
 Each directory includes a `README.md` and a starter template. Keep document
 IDs, status, and links to related work up to date.
@@ -235,6 +237,7 @@ changes as the work moves on, so it never needs a pull request of its own to sta
    the matching Runbook and link the two documents.
 6. Link each document to its upstream documents, work items, and review records.
 7. Keep statuses current as work progresses.
+8. Ingest new sources and finished documents into the Wiki so project knowledge stays current.
 
 Each section's README and template define its statuses, naming rules, and
 traceability fields. On GitHub, the review workflow is a pull request to `main`, and every
