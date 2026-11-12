@@ -28,8 +28,10 @@ tags: [review, pull-request, compliance]
 - **Triggers**:
   - a person asks for a review of a pull request;
   - the pull request that implements a Spec is about to leave draft, including the implementation pull
-    request of adoption (ADR-0001, rule 8);
-  - new commits arrive on a pull request that was already reviewed.
+    request of adoption (ADR-0001, rule 8). Its last commit (the ticked criteria and the final statuses)
+    and its description are already in place, so the review covers the head that will be merged;
+  - new commits arrive on a pull request that was already reviewed. The new review covers the whole pull
+    request again, at the new head, and says what became of the earlier findings.
 
 ## Prerequisites
 
@@ -43,7 +45,8 @@ head commit; `gh` fills in `{owner}` and `{repo}` from the clone's `origin`.
 
 The review is worth most when it runs in a context that did not write the pull request, such as a new
 agent session or a subagent, so it does not inherit the author's reasoning. When that is not possible,
-the review says so.
+the review says so. A review triggered by new commits may run in the context that did the previous
+review.
 
 ## Risk and Impact
 
@@ -86,11 +89,12 @@ Execute the steps in order. If a result differs from the **Expected result**, st
 - **Expected result**: the `accepted` ADRs on `main`. Read each one's rules (**Decision Outcome**) and
   its **Compliance & Validation** section, whose **Automated Verification** says which rules a CI stage
   checks and which are left to review; the review covers the latter. A pull request that changes an ADR is reviewed against
-  the version on `main`; when `main` has no accepted ADR yet (the adoption pull request), use the ADRs
-  the pull request accepts. Also read every Spec and Runbook whose ID the description lists or whose
-  file the pull request changes.
-- **On failure**: no accepted ADR on `main` or in the pull request means there is nothing to review
-  against; post a review that says so (Step 5).
+  the version on `main`. Also read every Spec and Runbook whose ID the description lists or whose
+  file the pull request changes, and the framework files whose rules apply: the **AI Agent Guidance**
+  of `docs/README.md` and of the README of each document type the pull request touches, and
+  `docs/wiki/README.md` when it changes the wiki.
+- **On failure**: no accepted ADR on `main` means there is nothing to review against; post a review
+  that says so (Step 5).
 
 ### Step 3: Check the CI result
 
@@ -98,12 +102,17 @@ Execute the steps in order. If a result differs from the **Expected result**, st
   ```bash
   gh pr checks <n>
   gh run list --commit <head> --json databaseId,event,conclusion
+  gh api 'repos/{owner}/{repo}' \
+    --jq '{allow_merge_commit, allow_squash_merge, allow_rebase_merge, delete_branch_on_merge}'
   ```
 - **Expected result**: the `pull_request` run for `<head>` concluded `success`, so every required stage
-  (SPEC-0001, Technical Design, section 2, by display name) passed on it; `gh run view <run-id>` shows
-  them. Those stages cover what each ADR's **Automated Verification** lists, so the review does not
-  repeat those checks. Checks from other apps, such as a secret scanner, are outside this review.
-  `gh pr checks` exits non-zero while a check fails or is pending.
+  (the job IDs in the summary's `--required` list in `.github/workflows/ci.yml` at `<head>`) passed on
+  it; `gh run view <run-id>` shows them. Those stages cover what each ADR's **Automated Verification**
+  lists, so the review does not repeat those checks. When the policy stage printed
+  `repository settings not checked`, the last command reads the settings of ADR-0002, rules 3 and 4,
+  with the reviewer's own login; if it cannot read them either, the review says they were not checked.
+  Checks from other apps, such as a secret scanner, are outside this review. `gh pr checks` exits
+  non-zero while a check fails or is pending.
 - **On failure**: a required stage that failed, is pending, or did not run on `<head>` is a "must fix"
   finding (ADR-0003, forbidden patterns); SPEC-0001, Technical Design, section 3 ("A run that fails")
   says how to fix it. Go on with Step 4, and also check by hand the rules that stage would have
@@ -114,15 +123,30 @@ Execute the steps in order. If a result differs from the **Expected result**, st
 - **Manual action**: check each rule from Step 2 against everything the pull request is made of: its
   title and description, its branch name, every commit's subject and body, the force pushes, the diff,
   and the files at `<head>`. For a pull request that implements a Spec, compare its ticked tasks and criteria and its
-  final status with what the diff and the CI runs actually show (ADR-0001, rule 2).
+  final status with what the diff and the CI runs actually show (ADR-0001, rule 2):
+  - repeat on `<head>` any local run the description gives as evidence (such as SPEC-0001, AC-08) when
+    the tools allow, and say so when it was not repeated;
+  - check a claim about another repository with `gh api`, such as an action pinned to its tag's SHA
+    (`gh api repos/<owner>/<action>/commits/<tag> --jq .sha`, SPEC-0001, Task 4);
+  - a decision the description attributes to a person is taken as recorded there (Escalation).
+
+  Two rules concern `main` rather than the pull request. A commit on `main`'s first-parent line that is
+  not a merge commit, other than the first one, is a direct push (ADR-0002, rule 8); report it as a
+  note. ADR-0003, rule 7, applies to the pull request while the latest `push` run on `main` fails:
+  ```bash
+  git log --first-parent --no-merges --format='%h %ad %s' --date=short origin/main
+  gh run list --branch main --event push --limit 1 --json conclusion,headSha
+  ```
 - **Expected result**: a list of findings. Each one names the rule ("ADR-0002, rule 7"; for a rule that
   lives in a framework file, the file and section, such as "`docs/adrs/README.md`, AI Agent Guidance"),
-  the location (`<path>:<line>` or `<path>` at `<head>`, `branch <name>`, a commit's short SHA, "title",
-  or "description"), what breaks the rule, and the fix. Something no rule backs, such as a style preference, is not a finding. Each finding is:
+  the location (`<path>` or `<path>:<line>`, both at the head named in the review; `branch <name>`; a
+  commit's short SHA; "title"; or "description"), what breaks the rule, and the fix. Something no rule
+  backs, such as a style preference, is not a finding. Each finding is:
   - **must fix**: the pull request breaks the rule and can be fixed with new commits or an edit to its
     title or description;
   - **note**: the fix would break another rule (a pushed commit cannot be reworded without rewriting
-    history, which ADR-0002, rule 5 forbids), or it is unclear whether the rule applies.
+    history, which ADR-0002, rule 5 forbids), or it is unclear whether the rule applies. A note of the
+    second kind is escalated ([Escalation](#escalation)).
 - **On failure**: when two rules contradict each other, or the pull request changes a rule of an
   accepted ADR without a new ADR that supersedes it, record a "must fix" finding and see
   [Escalation](#escalation).
@@ -135,7 +159,10 @@ Execute the steps in order. If a result differs from the **Expected result**, st
   ## Review against the accepted ADRs (RUNBOOK-0002)
 
   Head: <head, full SHA>. ADRs: <IDs from Step 2>. CI: <result from Step 3>.
-  Reviewer: <a context that did not write the pull request | the author's own context>.
+  Reviewer: <a context that did not write the pull request | the context of the previous review | the author's own context>.
+
+  ### Earlier findings
+  - <link to the earlier review>: <finding>: <fixed in <short SHA> | still open | no longer applies, because ...>.
 
   ### Must fix
   - <rule>: <location>: <what breaks the rule>. Fix: <fix>.
@@ -147,7 +174,8 @@ Execute the steps in order. If a result differs from the **Expected result**, st
   <rules checked that hold, by ID and number>
   EOF
   ```
-  Write "None." under an empty heading. Mark a finding that needs escalation as "escalated" and mention
+  Leave out **Earlier findings** on a first review. Write "None." under any other empty heading. Mark a
+  finding that needs escalation as "escalated" and mention
   its contacts (`@login`, see [Escalation](#escalation)) in it, unless the contact wrote the pull
   request.
 - **Expected result**: the review appears on the pull request with the state `COMMENTED`. The review
@@ -159,7 +187,8 @@ Execute the steps in order. If a result differs from the **Expected result**, st
 
 - The last review on the pull request is this one, on the pull request's current head:
   ```bash
-  gh api 'repos/{owner}/{repo}/pulls/<n>/reviews?per_page=100' --jq '.[-1] | {state, commit_id, html_url}'
+  gh api --paginate 'repos/{owner}/{repo}/pulls/<n>/reviews' \
+    --jq '.[] | "\(.state) \(.commit_id) \(.html_url)"' | tail -n 1
   gh pr view <n> --json headRefOid --jq .headRefOid
   ```
   `state` is `COMMENTED`, `commit_id` equals the head, and `html_url` is the review's link, the one to
@@ -171,13 +200,16 @@ Revert each state-changing step in reverse order:
 
 1. Revert Step 5: a submitted review cannot be deleted. Correct its body instead:
    `gh api -X PUT 'repos/{owner}/{repo}/pulls/<n>/reviews/<review-id>' -F body=@<file>`, with the ID
-   from `gh api 'repos/{owner}/{repo}/pulls/<n>/reviews?per_page=100' --jq '.[-1].id'`.
+   from `gh api --paginate 'repos/{owner}/{repo}/pulls/<n>/reviews' --jq '.[].id' | tail -n 1`.
 
 ## Escalation
 
-- **Contacts**: the `deciders` of the ADR concerned; otherwise, this Runbook's `owners`.
+- **Contacts**: the `deciders` of the ADR concerned; otherwise, this Runbook's `owners`. When every
+  contact wrote the pull request, the person who merges it decides.
 - **How**: post the review anyway (Step 5), with the finding marked "escalated", and say so to whoever
-  asked for the review. The review does not wait for the contacts' answer.
+  asked for the review. The review does not wait for the contacts' answer. The author records the
+  answer in the pull request's description, with the login of the person who gave it and the date,
+  and the next review takes it from there.
 - **When to Escalate**: two rules that contradict each other; a pull request that changes a rule of an
   accepted ADR without superseding it; a doubt about whether a rule applies that the documents do not
   settle; an API error that persists after one retry.

@@ -108,7 +108,8 @@ Rules:
 6. Documents refer to each other by ID: in the `related_*`, `supersedes`, and `superseded_by` fields, and
    with a relative link in the text. Each definition is written once, in the document that owns it;
    other documents cite it by ID and rule or requirement number (for example, "ADR-0003, rule 6")
-   instead of restating it. When the type's front matter has no field for a reference (a Spec that
+   instead of restating it. A citation may name what it cites in a few words, but does not repeat its
+   conditions or values. When the type's front matter has no field for a reference (a Spec that
    depends on another Spec, for example), the citation lives in the text only.
 7. CI checks the shape of every document (file name, `id`, fields, status, owners, references, and
    links) in the documentation stage of [SPEC-0001](../specs/0001-ci-pipeline.md). ADR rules that can be

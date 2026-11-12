@@ -109,9 +109,9 @@ is the only direct push to `main` (ADR-0002, rule 8).
    ```bash
    git push -u origin chore/adopt-docs-framework
    gh pr create --base main --title "Adopt the documentation framework" --body-file - <<'EOF'
-   Adds doc2gh (main) to docs/, accepts ADR-0001 to ADR-0003, moves SPEC-0001 to ready, updates
-   the front matter of RUNBOOK-0001 and RUNBOOK-0002, and adds the AI agent instruction file
-   (ADR-0001, rule 8).
+   Adds doc2gh (main) to docs/, accepts ADR-0001 to ADR-0003, moves SPEC-0001 to ready, leaves
+   the project's people and today's date in the front matter of those documents and of
+   RUNBOOK-0001 and RUNBOOK-0002, and adds the AI agent instruction file (ADR-0001, rule 8).
 
    RUNBOOK-0001, Steps 1 to 3, ran before this pull request. For the rollback, the settings
    before Step 2 were `<merge settings JSON>`, and the protection of `main` answered
@@ -125,19 +125,27 @@ is the only direct push to `main` (ADR-0002, rule 8).
    request as a draft (`gh pr create --draft --title "Build the CI pipeline (SPEC-0001)"`). It
    builds [SPEC-0001](specs/0001-ci-pipeline.md), protects `main` once its first run passes
    (SPEC-0001, Task 5), runs the Verification of RUNBOOK-0001, and verifies every criterion in
-   its own runs. Each task is ticked in the commit that completes it. Once the work is done, the
-   pull request is reviewed with [RUNBOOK-0002](runbooks/0002-review-a-pull-request-against-the-accepted-adrs.md),
-   by an agent that did not write it when the tool allows, and the "must fix" findings are fixed
-   in new commits. The last commit ticks the acceptance criteria and moves SPEC-0001 to `done` and
-   RUNBOOK-0001 and RUNBOOK-0002 to `active`; once that commit's run passes, the pull request
-   leaves draft (`gh pr ready <pr-number>`), and the person merges it the same way. Its
-   description lists each task and criterion with its evidence, the result of RUNBOOK-0001's
-   Verification, the NFR-01 measurements (SPEC-0001, Task 6), and a link to the review
-   (ADR-0001, rule 4).
+   its own runs. Each task is ticked in the commit that completes it. Once the work is done:
+   1. The last commit ticks the acceptance criteria and moves SPEC-0001 to `done` and RUNBOOK-0001
+      and RUNBOOK-0002 to `active`, with today's date in `last_verified_at`. The description lists
+      each task and criterion with its evidence, the result of RUNBOOK-0001's Verification, and
+      the NFR-01 measurements (SPEC-0001, Task 6) (ADR-0001, rule 4).
+   2. The pull request is reviewed on that head with
+      [RUNBOOK-0002](runbooks/0002-review-a-pull-request-against-the-accepted-adrs.md), by an
+      agent that did not write it when the tool allows. That review is the Runbook's first
+      execution. "Must fix" findings are fixed in new commits, which get a new review (RUNBOOK-0002,
+      Triggers), until a review has none. The description links every review.
+   3. Once the last review has no "must fix" finding and its head's run passes, the pull request
+      leaves draft (`gh pr ready <pr-number>`), and the person merges it the same way.
+
+   Every later pull request that implements a Spec follows the same order (RUNBOOK-0002,
+   Triggers).
 
 After the second merge, adoption is complete: every document that ships with doc2gh is final
 (the ADRs `accepted`, SPEC-0001 `done`, and both Runbooks `active`), and no pull request is
-pending (ADR-0001, rule 8).
+pending (ADR-0001, rule 8). Code the project already had gets its CI stage afterwards, from a Spec
+of its own (SPEC-0001, FR-06). The [LLM Wiki](#llm-wiki) arrives with no pages; its first ingest
+comes when a person asks for it.
 
 `git subtree` refuses to run with uncommitted changes. If it reports
 `prefix 'docs' already exists`, the project already has a `docs/` directory that is not a
@@ -224,8 +232,28 @@ other guidance, the file records:
    approval (ADR-0001, rule 2).
 
 The file points to `docs/README.md` (this file) and cites documents by ID instead of copying
-their rules (ADR-0001, rule 6). It records no status, ticked task, remote, or anything else that
-changes as the work moves on, so it never needs a pull request of its own to stay correct.
+their rules (ADR-0001, rule 6). When the project uses the [LLM Wiki](#llm-wiki), the file also
+records the wiki's project rules (`docs/wiki/README.md`, Schema Evolution): at least the page
+language and the tag vocabulary, which may be "free-form tags". It records no status, ticked task,
+remote, or anything else that changes as the work moves on, so it never needs a pull request of its
+own to stay correct.
+
+## LLM Wiki
+
+doc2gh ships the framework's LLM Wiki in `docs/wiki/`, with `docs/wiki/README.md` as its schema.
+It is optional, and adoption creates no pages.
+
+- Ingest, Query, and Lint run when a person asks for them. That includes step 8 of the
+  [Recommended Workflow](#recommended-workflow): ingesting a finished document is not part of the
+  pull request that finishes it.
+- Each request is a pull request of its own from a `docs/` branch
+  ([ADR-0002](adrs/0002-branching-and-merge-workflow.md), rule 2), and its merge approves the
+  pages ([ADR-0001](adrs/0001-link-the-documentation-framework-to-github.md), rule 2).
+- The agent discusses the takeaways of Ingest step 2 with the person before writing, and cites a
+  fact the person settles there as `@login, YYYY-MM-DD` (ADR-0001, rule 5).
+- The documentation stage checks the pages' file names, front matter, links, and index entries
+  ([SPEC-0001](specs/0001-ci-pipeline.md), FR-11); the rest of Lint stays with the agent.
+  RUNBOOK-0002 reviews a wiki pull request only when a person asks for it.
 
 ## Recommended Workflow
 

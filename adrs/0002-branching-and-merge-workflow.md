@@ -105,8 +105,8 @@ Rules:
 7. Commit messages and pull request titles and descriptions are written in English. A commit subject is
    imperative and at most 72 characters; the body, when there is one, explains why.
 8. Pushing directly to `main` is forbidden. The only exception is the first commit of a new repository,
-   which creates `main` so that pull requests have a base. When the GitHub plan offers branch protection,
-   the protection on `main` requires a pull request (ADR-0003, rule 6).
+   which creates `main` so that pull requests have a base. Where the GitHub plan offers branch
+   protection, it enforces this rule (ADR-0003, rule 6).
 9. Versioning and releases (tags, GitHub releases, deployments) are left to each project's own ADR.
 
 [RUNBOOK-0001](../runbooks/0001-configure-the-github-repository.md) applies rules 3, 4, and 8 on GitHub

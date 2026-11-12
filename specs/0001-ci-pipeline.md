@@ -61,7 +61,8 @@ tests.
   `README.md` and `template.md`. For each one it must check that:
   - the file name matches `NNNN-<title>.md`, where `NNNN` runs from `0001` to `9999` and `<title>` is
     lowercase letters and digits separated by single hyphens, and the number is unique within the
-    directory;
+    directory. A name that breaks this rule but starts with four digits still takes part in the
+    uniqueness and `id` checks with those digits;
   - the front matter parses (Technical Design, section 1);
   - `id` is `<PREFIX>-NNNN`, where the prefix belongs to the directory's type (`PRD`, `RFC`, `ADR`,
     `SPEC`, or `RUNBOOK`) and the number comes from the file name, and the `id` is unique across all
@@ -84,10 +85,9 @@ tests.
   - every relative link resolves (link rule in section 2).
 
   Files that are not `*.md`, subdirectories of a type directory, and files outside the type directories
-  (such as `<docs>/README.md`) are not examined. This leaves out the LLM Wiki in `<docs>/wiki/`, whose
-  pages have no ID, number, or status; the [Lint](../wiki/README.md#lint) operation of its schema checks
-  their front matter and links. A missing type directory, `README.md`, `template.md`, or lifecycle table
-  is a violation. A missing `<docs>` directory is an execution error (exit `2`).
+  (such as `<docs>/README.md`) are not examined. The LLM Wiki in `<docs>/wiki/`, whose pages have no ID,
+  number, or status, has checks of its own (FR-11). A missing type directory, `README.md`, `template.md`,
+  or lifecycle table is a violation. A missing `<docs>` directory is an execution error (exit `2`).
 
   Every FR-02 violation names SPEC-0001 as its source, except the owner check, which names ADR-0001. A
   duplicated number or `id` is reported on each file involved. A document whose front matter does not
@@ -130,7 +130,9 @@ tests.
   the template), and adds the job ID to the summary's `--required` once the code exists (FR-08). If the
   stage only runs when code is affected, it also adds the job ID to `--gated` and its paths to
   `CODE_PATHS` in `affects-code` (FR-07). If `main` is already protected, the same Spec adds the new
-  required stage to the protection (RUNBOOK-0001, Step 4).
+  required stage to the protection (RUNBOOK-0001, Step 4). Code that already exists when the project
+  adopts doc2gh gets its stage the same way, from a Spec of its own written after adoption: the
+  implementation pull request of adoption builds this Spec only (ADR-0001, rule 8).
 - **FR-07**: **Changes** job (`affects-code`). It prints `code=true` or `code=false` as its only standard
   output, and the reason on standard error.
   - Code is affected when a file changed between `BASE` and `HEAD`
@@ -143,10 +145,11 @@ tests.
     share this single flag; no stage can narrow it to its own paths.
   - It also prints `code=true` for any event other than `pull_request` and `push` (such as `schedule` and `workflow_dispatch`), when
     `BASE` is empty or all zeros, and when `git diff` fails. `affects-code` always exits with `0`, and an empty `HEAD` means `HEAD`.
-  - The documentation and policy stages always run. Only projects with slow stages need this job.
-- **FR-08**: A required stage is one that must pass before a merge (ADR-0003, rule 6). `docs` and
-  `policy` are required from day one; each project stage becomes required as soon as the code it checks
-  exists. A stage with nothing to check yet succeeds and says so.
+  - The documentation and policy stages always run. Only projects with slow stages need this job. The
+    Spec that adds the first stage that only runs when code is affected builds `affects-code` and the
+    `changes` job to this requirement, citing it; this Spec does not change.
+- **FR-08**: Required stages (ADR-0003, rule 6): `docs` and `policy` from day one, and each project
+  stage as soon as the code it checks exists. A stage with nothing to check yet succeeds and says so.
 - **FR-09**: **Summary** job (`summary --required <ids> [--gated <ids>]`, where each list holds job IDs
   separated by commas, with no spaces; an ID uses only letters, digits, `_`, and `-`, and a list with an
   empty or repeated item is malformed). It reads the `NEEDS` variable and, on every run, including after
@@ -168,6 +171,32 @@ tests.
   mismatch is a violation located at `branch <name>`. Other events skip this check. An empty
   `GITHUB_HEAD_REF` on a `pull_request` event is an execution error (exit `2`). The check needs no API,
   so it also runs with `--offline`.
+- **FR-11**: **Documentation** stage, LLM Wiki: the shape of the wiki's pages, which includes the
+  mechanical checks of the wiki's [Lint](../wiki/README.md#lint) operation. When `<docs>/wiki/pages/`
+  exists, `check-docs` examines every `*.md` file at its top level, and checks that:
+  - the file name is lowercase letters and digits separated by single hyphens, plus `.md`;
+  - the front matter parses (Technical Design, section 1, with `<docs>/wiki/template.md` deciding which
+    fields are lists), and every front matter field in that template is present;
+  - `type`, when present, is `wiki`, and `category`, when present, is listed in the schema's category
+    table: the first table in the `<docs>/wiki/README.md` section whose heading starts with
+    `## Page Categories`, taking the backticked value in the first column of each row;
+  - `created_at` and `updated_at` are valid `YYYY-MM-DD` dates, and `updated_at` is not earlier than
+    `created_at`;
+  - every relative link resolves (link rule in section 2);
+  - `<docs>/wiki/index.md` links to it exactly once, counting every link the link rule considers that
+    resolves to the page. The violation is located at the page, and its message gives the lines of
+    `index.md`.
+
+  `<docs>/wiki/index.md` and `<docs>/wiki/log.md` have no front matter; when they exist, every relative
+  link in them resolves. When `pages/` exists, a missing `index.md`, wiki `README.md`, `template.md`, or
+  category table, and a `template.md` whose front matter does not parse, are violations located at that
+  file, and the page checks that need it are skipped. A page whose front matter does not parse gets that
+  violation, and the checks that read the front matter are skipped. A missing `wiki/` or `pages/` means
+  there is no wiki yet, and nothing is checked. `raw/` (sources that stay as they came) and
+  subdirectories of `pages/` are not examined, and the wiki's `README.md` and `template.md` are only
+  read as described here. Every other Lint check, such as contradictions, orphan pages, missing
+  cross-references, the category a page is listed under in `index.md`, and whether every cited source
+  is in `sources`, stays with Lint. Every FR-11 violation names SPEC-0001 as its source.
 
 ## Non-Functional Requirements & Constraints
 
@@ -201,7 +230,9 @@ is unquoted or wrapped in single or double quotes; `key: [a, b]`, a flow list of
 with nothing after it, followed by zero or more `  - value` lines, forming a block list (empty when no
 item follows). Anything else is a violation reported on its line: nested maps, multi-line values, a
 repeated key, a list item outside a list, or a missing closing `---`, reported on
-line 1. A space followed by `#` after a value or a flow list starts a trailing comment, which is dropped. Keys
+line 1. The body, which the H1 and link checks read, starts after the closing `---`. A file whose
+first line is not `---` has no front matter: that is a violation on line 1, and the whole file is body.
+A missing closing `---` leaves no body, so those checks are skipped. A space followed by `#` after a value or a flow list starts a trailing comment, which is dropped. Keys
 match `[A-Za-z_][A-Za-z0-9_]*`; list items are indented by at least one space, and blank or comment lines
 may sit between them; quoted values are taken literally, with no escapes. A field is a list when the
 type's `template.md` writes it as a list (flow or block), as with `deciders`, `owners`, `authors`,
@@ -381,9 +412,8 @@ flowchart LR
   (ADR-0003, rule 4). The read-only `GITHUB_TOKEN` still reaches `check-policy` (NFR-04).
 - **Framework files** (each type's `README.md` and `template.md`, and the files at the root of
   `<docs>`): not examined at all, neither metadata nor links (FR-02).
-- **LLM Wiki** (everything under `<docs>/wiki/`, its `README.md` and `template.md` included): not
-  examined (FR-02). A pull request that only changes the wiki is a documentation-only pull request
-  (FR-07).
+- **LLM Wiki**: only its pages, `index.md`, and `log.md` are examined, and only by FR-11. A pull
+  request that only changes the wiki is a documentation-only pull request (FR-07).
 - **Documentation-only pull request**: the slow stages do not run, and the summary shows them as
   `skipped (code not affected)`.
 - **Stage with nothing to check yet**: succeeds and says there is nothing to check (FR-08).
@@ -435,18 +465,21 @@ flowchart LR
   `code=true` for those events (FR-07).
 - [ ] **AC-10**: Given a pull request from a branch named outside `<type>/<short-topic>`, when the
   pipeline runs, then the policy stage fails, naming ADR-0002 and the branch.
+- [ ] **AC-11**: Given a wiki page with a broken relative link, a missing template field, or a
+  `category` outside the schema, or a page that `index.md` lists twice or not at all, when the pipeline
+  runs, then the documentation stage fails, naming SPEC-0001 and the page.
 
 ## Task Breakdown (AI Execution)
 
 Incremental, verifiable implementation steps:
 
 - [ ] **Task 1**: Implement `ci/ci_common.py` (front matter parsing, violation format, exit
-  codes, default root) and `check-docs` (FR-02), with tests in `ci/tests/`
+  codes, default root) and `check-docs` (FR-02 and FR-11), with tests in `ci/tests/`
 - [ ] **Task 2**: Implement `check-policy` with the workflow rules (FR-03), the repository settings check
   (FR-04), and the branch name check (FR-10), with tests that use a local fake API through
   `GITHUB_API_URL`
-- [ ] **Task 3**: Implement `summary` (FR-09) and, if the project has a stage that only runs when code is
-  affected, `affects-code` (FR-07), with tests
+- [ ] **Task 3**: Implement `summary` (FR-09), with tests. `affects-code` (FR-07) comes later, with the
+  first project stage that only runs when code is affected (FR-06)
 - [ ] **Task 4**: Write `.github/workflows/ci.yml` from the template in section 2. For each action, use
   the latest release (`gh api repos/<owner>/<action>/releases/latest --jq .tag_name`) pinned to the SHA
   of its tag (`gh api repos/<owner>/<action>/commits/<tag> --jq .sha`), with the tag as the comment
@@ -460,8 +493,9 @@ Incremental, verifiable implementation steps:
 
 ## Test & Verification Plan
 
-- **Unit Tests**: every `check-docs` and `check-policy` rule, with valid and invalid cases in temporary
-  repositories created by the tests; the front matter subset, including its invalid forms; the link rule;
+- **Unit Tests**: every `check-docs` and `check-policy` rule, the wiki checks (FR-11) included, with
+  valid and invalid cases in temporary repositories created by the tests; the front matter subset,
+  including its invalid forms; the link rule;
   `check-policy` against a local fake API (settings readable, hidden, and mismatched); `affects-code` with
   each event type, matching and non-matching paths, empty or all-zero `BASE`, and a failing `git diff`;
   `summary` with passed, failed, cancelled, missing, gated-and-skipped, and skipped-for-another-reason
@@ -470,14 +504,17 @@ Incremental, verifiable implementation steps:
   is opened just to break a rule, and nothing waits for the merge: every criterion is verified in that
   pull request, which therefore moves this Spec to `done`
   ([ADR-0001](../adrs/0001-link-the-documentation-framework-to-github.md), rule 2):
-  - AC-01 to AC-05, AC-07, and AC-10: the unit tests for those rules, which run in the policy stage of
-    every run;
+  - AC-01 to AC-05, AC-07, AC-10, and AC-11: the unit tests for those rules, which run in the policy
+    stage of every run;
   - AC-06: the `summary` tests for gated stages skipped because no code was affected and, where
     `affects-code` exists, its tests for a change under `docs/` only;
   - AC-08: a local run of each script on the pull request's head commit, compared with the CI log of
     that commit's run. A pull request run tests the merge of the head into `main`
     (`refs/pull/<n>/merge`), so the comparison holds while that merge has the head's tree; otherwise,
-    merge `main` into the branch first (ADR-0002, rule 5);
+    merge `main` into the branch first (ADR-0002, rule 5). To run the scripts on the very commit the
+    run tested, without switching branches:
+    `git fetch origin refs/pull/<n>/merge && git worktree add --detach <dir> FETCH_HEAD`, run each script
+    in `<dir>`, then `git worktree remove <dir>`;
   - AC-09: the `on:` block of the workflow (FR-01) and, where `affects-code` exists, its tests for
     `schedule` and `workflow_dispatch`; without it, every stage runs on every event.
 - **Manual Verification**: compare a local run of each script with the CI log of the same commit (AC-08);
