@@ -7,7 +7,7 @@ type: spec
 title: "CI pipeline"
 status: draft
 created_at: 2026-11-11
-updated_at: 2026-11-11
+updated_at: 2026-11-12
 # ============================================================================
 owners:
   - "@sjgarani"
@@ -200,9 +200,10 @@ item follows). Anything else is a violation reported on its line: nested maps, m
 repeated key, a list item outside a list, or a missing closing `---`, reported on
 line 1. A space followed by `#` after a value or a flow list starts a trailing comment, which is dropped. Keys
 match `[A-Za-z_][A-Za-z0-9_]*`; list items are indented by at least one space, and blank or comment lines
-may sit between them; quoted values are taken literally, with no escapes. `deciders`, `owners`,
-`supersedes`, `tags`, and every `related_*` field are lists; every other field is a single value; a field
-of the wrong kind is a violation.
+may sit between them; quoted values are taken literally, with no escapes. A field is a list when the
+type's `template.md` writes it as a list (flow or block), as with `deciders`, `owners`, `authors`,
+`reviewers`, `stakeholders`, `supersedes`, `tags`, and every `related_*` field; every other field is a
+single value. A field of the wrong kind is a violation.
 
 **Inputs**, besides the repository files:
 
@@ -416,7 +417,9 @@ flowchart LR
   stage as `failed` and exits with `1`.
 - [ ] **AC-08**: Given any script in `ci/`, when it runs locally on the same commit, then it
   produces the same result as in CI.
-- [ ] **AC-09**: Given a scheduled or manual run, when the pipeline runs, then every stage runs.
+- [ ] **AC-09**: Given the workflow, when a scheduled or manual run starts, then every stage runs: `on:`
+  includes `schedule` and `workflow_dispatch` (FR-01), and `affects-code`, where it exists, prints
+  `code=true` for those events (FR-07).
 - [ ] **AC-10**: Given a pull request from a branch named outside `<type>/<short-topic>`, when the
   pipeline runs, then the policy stage fails, naming ADR-0002 and the branch.
 
@@ -434,11 +437,16 @@ Incremental, verifiable implementation steps:
 - [ ] **Task 4**: Write `.github/workflows/ci.yml` from the template in section 2. For each action, use
   the latest release (`gh api repos/<owner>/<action>/releases/latest --jq .tag_name`) pinned to the SHA
   of its tag (`gh api repos/<owner>/<action>/commits/<tag> --jq .sha`), with the tag as the comment
-- [ ] **Task 5**: When the plan allows branch protection, register the required stages as required status
-  checks on `main` (RUNBOOK-0001)
-- [ ] **Task 6**: Measure the duration of the always-on stages and confirm the NFR-01 targets
-- [ ] **Task 7**: Write the Runbook for diagnosing pipeline failures
-  ([RUNBOOK-0002](../runbooks/0002-diagnose-and-fix-ci-pipeline-failures.md))
+- [ ] **Task 5**: Once the first run of this Spec's pull request passes, protect `main` with the required
+  stages as required status checks (RUNBOOK-0001, Step 4), so they already show up as required on that
+  pull request. On a plan without branch protection (RUNBOOK-0001, Step 3), there is nothing to apply
+  and the task is done; RUNBOOK-0001 runs again if the plan changes
+- [ ] **Task 6**: Measure the duration of the always-on stages and confirm the NFR-01 targets. If a
+  target is missed, record the measurement in the pull request and, in the same pull request, either
+  remove the cause or revise NFR-01
+- [ ] **Task 7**: Check that [RUNBOOK-0002](../runbooks/0002-diagnose-and-fix-ci-pipeline-failures.md)
+  matches the scripts and the workflow (job names, violation format, and commands), and fix it where it
+  does not
 
 ## Test & Verification Plan
 
@@ -448,9 +456,19 @@ Incremental, verifiable implementation steps:
   each event type, matching and non-matching paths, empty or all-zero `BASE`, and a failing `git diff`;
   `summary` with passed, failed, cancelled, missing, gated-and-skipped, and skipped-for-another-reason
   stages.
-- **Integration / E2E Tests**: test pull requests that break each rule (AC-01 to AC-07 and AC-10) and one
-  manual run (AC-09).
+- **Integration / E2E Tests**: the runs of the pull request that implements this Spec. No pull request
+  is opened just to break a rule, and nothing waits for the merge: every criterion is verified in that
+  pull request, which therefore moves this Spec to `done`
+  ([ADR-0001](../adrs/0001-link-the-documentation-framework-to-github.md), rule 2):
+  - AC-01 to AC-05, AC-07, and AC-10: the unit tests for those rules, which run in the policy stage of
+    every run;
+  - AC-06: the `summary` tests for gated stages skipped because no code was affected and, where
+    `affects-code` exists, its tests for a change under `docs/` only;
+  - AC-08: a local run of each script on the pull request's head commit, compared with that commit's CI
+    log;
+  - AC-09: the `on:` block of the workflow (FR-01) and, where `affects-code` exists, its tests for
+    `schedule` and `workflow_dispatch`; without it, every stage runs on every event.
 - **Manual Verification**: compare a local run of each script with the CI log of the same commit (AC-08);
   before each merge, confirm in the summary job that every required stage
-  passed; once branch protection is in place, confirm that those stages show up as required on the pull
-  request.
+  passed; once branch protection is in place (Task 5), confirm that those stages show up as required on
+  the pull request.

@@ -49,7 +49,7 @@ later.
 ## AI Agent Guidance
 
 1. **Instructions for AI Agents**:
-   - Execute only `active` Runbooks. Treat `draft` Runbooks as unverified, and never execute `deprecated` ones.
+   - Execute only `active` Runbooks, unless a `draft` Runbook's **AI Agent Execution Rules** allow its first execution. Treat `draft` Runbooks as unverified, and never execute `deprecated` ones.
    - Follow the **AI Agent Execution Rules** section. Run the steps listed under **Safe to run without confirmation** directly. Ask for human confirmation before any step listed under **Requires human confirmation**. Stop at any of the **Stop conditions**.
    - When a step's result differs from its **Expected result**, follow its **On failure** instructions instead of continuing.
    - When asked to draft a Runbook, inspect the related Specs, ADRs and code to identify the commands, risks and rollback steps.

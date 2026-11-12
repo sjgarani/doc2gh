@@ -7,7 +7,7 @@ type: runbook
 title: "Diagnose and fix CI pipeline failures"
 status: draft
 created_at: 2026-11-11
-updated_at: 2026-11-11
+updated_at: 2026-11-12
 last_verified_at: ""
 # ============================================================================
 owners:
@@ -164,7 +164,11 @@ This procedure only changes the repository through pull requests:
   and editing files on the local branch to fix the violations from Step 4.
 - **Requires human confirmation**: Step 5 (re-running jobs), Step 6 (commit, push, pull request, merge),
   revoking or rotating credentials, any change to `.github/workflows/` or to the rules in
-  `ci/`, and the rollback.
+  `ci/`, and the rollback. On the pull request that implements SPEC-0001 during adoption, the request to
+  adopt doc2gh is that confirmation for everything except the merge, which a person does.
+- **First execution**: an agent may carry out this Runbook while it is still `draft`; the pull request
+  that fixes the failure moves it to `active`
+  ([ADR-0001](../adrs/0001-link-the-documentation-framework-to-github.md), rule 8).
 - **Stop conditions**: a real secret was detected (alert the owner without repeating its value; the
   credential is revoked or rotated before anything else); a violation whose fix would change a rule from
   an `accepted` ADR; a local result that differs from CI with no explanation; a failure that persists

@@ -56,12 +56,15 @@ SPEC-0001 checks expect the document types in `docs/<type>/`.
 ### Rules
 
 - Pick the branch for your language, `main` for English or `pt_BR` for Brazilian Portuguese,
-  and keep using it for every update.
+  and keep using it for every update. Unless told otherwise, an AI agent picks the language the
+  person writes to it in.
 - Always pass `--squash`, so each adoption or update adds a single commit of doc2gh content
   to the project's history.
 - Each adoption or update gets a pull request of its own, from a `chore/` branch, holding only
   the doc2gh commits and the adjustments they force on the project's documents, in separate
-  commits ([ADR-0002](adrs/0002-branching-and-merge-workflow.md), rules 2 and 6).
+  commits ([ADR-0002](adrs/0002-branching-and-merge-workflow.md), rules 2 and 6). The adoption
+  pull request also accepts the documents and adds the AI agent instruction file
+  ([First adoption](#first-adoption)).
 - Merge that pull request with a merge commit (ADR-0002, rule 3) and never rebase its branch:
   `git subtree pull` relies on the commits the previous pull created, and rewriting them breaks
   the next update.
@@ -70,24 +73,59 @@ SPEC-0001 checks expect the document types in `docs/<type>/`.
 
 ### First adoption
 
-```bash
-git switch main
-git pull --ff-only origin main        # skip in a repository without an origin remote
-git switch -c chore/add-docs-framework
-git subtree add --prefix=docs https://github.com/sjgarani/doc2gh.git main --squash \
-  -m $'Add the documentation framework (main)\n\nSource: https://github.com/sjgarani/doc2gh.git'
-git push -u origin chore/add-docs-framework
-gh pr create --base main --title "Add the documentation framework" \
-  --body "Adds doc2gh (main) to docs/: ADR-0001 to ADR-0003, SPEC-0001, RUNBOOK-0001, RUNBOOK-0002."
-gh pr merge <pr-number> --merge --delete-branch
-```
+Adoption takes two pull requests, and the person adopting doc2gh only has to merge them
+([ADR-0001](adrs/0001-link-the-documentation-framework-to-github.md), rule 8). It needs `gh`
+authenticated (`gh auth status`) as an admin of the repository, and `main` on GitHub with at
+least one commit. A new project starts with `git init -b main` and a first commit (a
+`README.md`, for example), then creates the repository with
+`gh repo create <owner>/<repo> --private --source . --push` (or `--public`); that first commit
+is the only direct push to `main` (ADR-0002, rule 8).
+
+1. Bring doc2gh in, on a local branch:
+
+   ```bash
+   git switch main
+   git pull --ff-only origin main
+   git switch -c chore/adopt-docs-framework
+   git subtree add --prefix=docs https://github.com/sjgarani/doc2gh.git main --squash \
+     -m $'Add the documentation framework (main)\n\nSource: https://github.com/sjgarani/doc2gh.git'
+   ```
+
+2. Apply the merge settings with Steps 1 to 3 of
+   [RUNBOOK-0001](runbooks/0001-configure-the-github-repository.md), now in `docs/runbooks/`, so
+   the adoption pull request can only be merged with a merge commit. The values that Step 1
+   records go into the adoption pull request's description, for the rollback. Step 4 and the
+   Runbook's Verification wait for the implementation pull request (step 5 below).
+3. Add two commits on the same branch:
+   - **Accept the documents**: ADR-0001 to ADR-0003 go to `accepted` and SPEC-0001 to `ready`.
+     In those four documents and in both Runbooks, `deciders` and `owners` hold the adopting
+     person's login (`gh api user --jq .login`) unless they named other people, and
+     `updated_at` is today's date. The Runbooks stay `draft`.
+   - **Add the AI agent instruction file** ([AI agent instructions](#ai-agent-instructions)).
+4. Open the adoption pull request:
+
+   ```bash
+   git push -u origin chore/adopt-docs-framework
+   gh pr create --base main --title "Adopt the documentation framework" \
+     --body "Adds doc2gh (main) to docs/, accepts ADR-0001 to ADR-0003, and moves SPEC-0001 to ready (ADR-0001, rule 8). Settings before RUNBOOK-0001, Step 2: <Step 1 output>."
+   ```
+
+   The person reviews it and merges it with a merge commit
+   (`gh pr merge <pr-number> --merge --delete-branch`). That merge approves the documents.
+5. From a `ci/ci-pipeline` branch cut from the updated `main`, open the implementation pull
+   request as a draft (`gh pr create --draft`). It builds [SPEC-0001](specs/0001-ci-pipeline.md),
+   protects `main` once its first run passes (SPEC-0001, Task 5), runs the Verification of
+   RUNBOOK-0001, and verifies every criterion in its own runs. Its last commit moves SPEC-0001 to
+   `done` and RUNBOOK-0001 to `active`; once that commit's run passes, the pull request leaves
+   draft (`gh pr ready <pr-number>`), and the person merges it the same way.
+
+After the second merge, adoption is complete and no pull request is pending. RUNBOOK-0002
+becomes `active` in the pull request that fixes the first CI failure diagnosed with it, which
+may be the implementation pull request itself (ADR-0001, rule 8).
 
 `git subtree` refuses to run with uncommitted changes. If it reports
 `prefix 'docs' already exists`, the project already has a `docs/` directory that is not a
 subtree; migrate it first, as a separate piece of work.
-
-The documents that ship with doc2gh arrive as `proposed` and `draft`. Accepting the ADRs and
-implementing SPEC-0001 come next, in pull requests of their own (ADR-0001, rule 8).
 
 ### Updating
 
@@ -138,8 +176,37 @@ Stop and ask the repository owner when:
 
 AI agents may run the read-only commands (`git status`, `git log`, `git diff`, and
 `ci/check-docs`) on their own. `git subtree add` and `git subtree pull`, conflict resolution,
-commits, pushes, and opening, merging, or reverting pull requests need a person's
-confirmation.
+commits, pushes, and opening or reverting pull requests need a person's confirmation. A request
+to adopt or update doc2gh is that confirmation for every step of the procedure, except a
+conflict that does not fit the rules above. A person merges every pull request.
+
+## AI agent instructions
+
+An AI agent asked to adopt doc2gh carries out [First adoption](#first-adoption) to the end. It
+stops only:
+
+- to ask for the owner and visibility of the GitHub repository, when it has to create one;
+- when a pull request is ready for review, for the person to review and merge it: the adoption
+  pull request as soon as it is open, the implementation pull request once it leaves draft. The
+  agent follows the adoption pull request (`gh pr view <pr-number> --json state`) and goes on to
+  the implementation pull request as soon as it is merged, without waiting for a new request;
+- at the stop conditions of the documents it follows.
+
+The agent writes the project's instruction file itself (the file its `/init` command would
+write, such as `AGENTS.md` or `CLAUDE.md`) and puts it in the adoption pull request. Ahead of any
+other guidance, the file records:
+
+1. Approving the documentation is the first step. While any of ADR-0001 to ADR-0003 is
+   `proposed` or SPEC-0001 is `draft`, the only work is the pull request that approves them
+   ([ADR-0001](adrs/0001-link-the-documentation-framework-to-github.md), rule 8). Every later
+   piece of work also starts from its document, following the
+   [Recommended Workflow](#recommended-workflow).
+2. The agent prepares pull requests; a person reviews and merges them, and the merge is the
+   approval (ADR-0001, rule 2).
+3. The file points to `docs/README.md` (this file) and cites documents by ID instead of copying
+   their rules (ADR-0001, rule 6). It records no status, ticked task, remote, or anything else
+   that changes as the work moves on, so it never needs a pull request of its own to stay
+   correct.
 
 ## Recommended Workflow
 

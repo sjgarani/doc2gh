@@ -7,7 +7,7 @@ type: runbook
 title: "Configure the GitHub repository"
 status: draft
 created_at: 2026-11-11
-updated_at: 2026-11-11
+updated_at: 2026-11-12
 last_verified_at: ""
 # ============================================================================
 owners:
@@ -27,9 +27,12 @@ tags: [github, settings, branch-protection]
   mandatory and the required stages from [SPEC-0001](../specs/0001-ci-pipeline.md) as required status
   checks.
 - **Triggers**:
-  - a repository has just adopted doc2gh;
-  - the policy stage reports a settings mismatch or "repository settings not checked" (SPEC-0001,
-    FR-04);
+  - a repository is adopting doc2gh: Steps 1 to 3 before its first pull request, so that pull request
+    can only be merged with a merge commit, and Step 4 during the pull request that implements SPEC-0001
+    (Task 5);
+  - the policy stage reports a settings mismatch, or a local run with an admin's credentials prints
+    "repository settings not checked" (SPEC-0001, FR-04); the CI token usually cannot read the settings,
+    so that note in CI is expected;
   - a plan or visibility change makes branch protection available;
   - a new stage has become required (SPEC-0001, FR-08).
 
@@ -38,7 +41,8 @@ tags: [github, settings, branch-protection]
 - **Access & Permissions**: admin role on the repository.
 - **Tools**: `gh`, authenticated (`gh auth status`) with the `repo` scope.
 - **Approvals**: agreement from the repository owner before Steps 2 and 4, which change the rules for
-  every collaborator.
+  every collaborator. One agreement, given before Step 2, covers both steps of the same execution;
+  during adoption, the request to adopt doc2gh is that agreement.
 - **Credentials**: only the `gh` login. Never paste tokens into commands, logs, or pull requests.
 
 In the commands, `<owner>/<repo>` stands for the project repository.
@@ -64,7 +68,8 @@ Execute the steps in order. If a result differs from the **Expected result**, st
     --jq '{visibility, allow_merge_commit, allow_squash_merge, allow_rebase_merge, delete_branch_on_merge}'
   gh api repos/<owner>/<repo>/branches/main/protection
   ```
-- **Expected result**: all five fields filled in; keep them for the rollback. The second call returns
+- **Expected result**: all five fields filled in; keep them for the rollback (during adoption, in the
+  adoption pull request's description). The second call returns
   the current protection, `Branch not protected` (HTTP 404), or "Upgrade to GitHub Pro or make this
   repository public to enable this feature." (HTTP 403); note which one.
 - **On failure**: missing or `null` merge fields mean you lack admin rights; see
@@ -86,11 +91,18 @@ Execute the steps in order. If a result differs from the **Expected result**, st
 ### Step 3: Check whether the plan offers branch protection
 
 - **Manual action**: look at the second response from Step 1.
-- **Expected result**: an existing protection or `Branch not protected` means the plan supports
-  protection; continue with Step 4.
-- **On failure**: "Upgrade to GitHub Pro or make this repository public to enable this feature." means
-  the plan offers no protection for this repository. Checks stay informational (ADR-0003, rule 6); skip
-  Step 4 and go to [Verification](#verification).
+- **Expected result**: one of two answers, both valid:
+  - an existing protection or `Branch not protected`: the plan supports protection. Continue with
+    Step 4 once the required stages have reported on an open pull request; a protection that requires
+    checks no run reports blocks every merge, so during adoption Step 4 waits for the first passing
+    run of the pull request that implements SPEC-0001;
+  - "Upgrade to GitHub Pro or make this repository public to enable this feature.": the plan offers
+    no protection for this repository. Checks stay informational (ADR-0003, rule 6); skip Step 4 and go
+    to [Verification](#verification).
+
+  During adoption, Verification runs in the pull request that implements SPEC-0001, where
+  `ci/check-policy` exists.
+- **On failure**: any other answer; see [Escalation](#escalation).
 
 ### Step 4: Protect `main`
 
@@ -125,10 +137,8 @@ Execute the steps in order. If a result differs from the **Expected result**, st
   gh api repos/<owner>/<repo>/branches/main/protection \
     --jq '{contexts: .required_status_checks.contexts, admins: .enforce_admins.enabled}'
   ```
-- On the next pull request, "Create a merge commit" is the only merge option and, with protection, the
+- On an open pull request, "Create a merge commit" is the only merge option and, with protection, the
   required stages are marked "Required".
-- The policy stage on the next pull request no longer reports "repository settings not checked",
-  provided the CI token can read the settings.
 - Locally, with an admin's credentials, `GITHUB_TOKEN=$(gh auth token) ci/check-policy`
   reports no `[ADR-0002]` violation and no `repository settings not checked` note.
 
@@ -145,8 +155,8 @@ Revert each state-changing step in reverse order:
 
 - **Contacts**: the repository owner (the `owners` field).
 - **When to Escalate**: no admin role; no branch protection on the plan for a project that needs merges
-  blocked (a plan or visibility decision); an API error that persists after one retry; a failed
-  rollback.
+  blocked (a plan or visibility decision; not during adoption, where checks simply stay informational,
+  as ADR-0003, rule 6, says); an API error that persists after one retry; a failed rollback.
 
 ## AI Agent Execution Rules
 
@@ -154,6 +164,11 @@ Revert each state-changing step in reverse order:
 
 - **Safe to run without confirmation**: Steps 1 and 3 and [Verification](#verification), which only read.
 - **Requires human confirmation**: Steps 2 and 4 and the rollback, which change repository rules for
-  everyone.
+  everyone. One confirmation before Step 2 covers Steps 2 and 4 of the same execution (see
+  **Approvals**).
+- **First execution**: during adoption, an agent carries out this Runbook while it is still `draft`;
+  that execution is what makes it `active`
+  ([ADR-0001](../adrs/0001-link-the-documentation-framework-to-github.md), rule 8).
 - **Stop conditions**: missing merge fields in Step 1; any HTTP response other than the ones listed; a
-  pull request being merged while the procedure runs.
+  pull request being merged while Step 2 or Step 4 runs; Step 4 before the required stages have
+  reported on an open pull request (Step 3).

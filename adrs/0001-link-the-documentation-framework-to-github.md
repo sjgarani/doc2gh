@@ -7,7 +7,7 @@ type: adr
 title: "Link the documentation framework to GitHub"
 status: proposed
 created_at: 2026-11-11
-updated_at: 2026-11-11
+updated_at: 2026-11-12
 superseded_by: ""
 # ============================================================================
 deciders:
@@ -91,11 +91,12 @@ Rules:
    are written in the language of the adopted framework.
 2. The project's review workflow is a pull request to `main` (ADR-0002). New documents, content changes,
    and status changes all go through a pull request, and the merge records the review. No document
-   reaches an approval status (`approved`, `accepted`, `ready`, or `active`) without one. A Spec written
-   and implemented in the same pull request carries the status the work ends with: `done` when every task
-   and criterion is met, `in-progress` otherwise. A task is ticked in the pull request that brings its
-   code to `main`; an acceptance criterion, once it has been verified the way the Spec's test plan
-   describes.
+   reaches an approval status (`approved`, `accepted`, `ready`, or `active`) without one. The pull
+   request that implements a Spec, whether or not it also writes it, carries the status the work ends
+   with: `done` when every task and criterion is met, `in-progress` otherwise; a Spec implemented in one
+   pull request needs no other pull request for its status. A task is ticked in the pull request that
+   brings its code to `main`; an acceptance criterion, once it has been verified the way the Spec's test
+   plan describes.
 3. Work items are the tasks in each Spec's Task Breakdown section. GitHub Issues may capture requests and
    bugs that have no document yet. Once an issue turns into work, that work is described in a document,
    the issue references the document's ID, and the pull request that finishes the work closes the issue
@@ -114,10 +115,19 @@ Rules:
    automated become checks, listed in SPEC-0001, and each violation names the ADR it comes from; each
    ADR's compliance section says which of its rules are left to review.
 8. The documents that ship with doc2gh (ADR-0001 to ADR-0003, SPEC-0001, RUNBOOK-0001 and RUNBOOK-0002)
-   become the project's own documents on adoption. In one pull request, the project accepts the ADRs,
-   moves SPEC-0001 to `ready`, and puts its own people in `deciders` and `owners`. It then implements
-   SPEC-0001 in its own repository and keeps their statuses, tasks, and criteria current through pull
-   requests, like any other document.
+   become the project's own documents on adoption, which takes two pull requests:
+   - the adoption pull request brings doc2gh in, accepts the ADRs, moves SPEC-0001 to `ready`, puts the
+     project's people in `deciders` and `owners`, and adds the project's AI agent instruction file. Its
+     merge approves them, and no other work starts before it;
+   - the implementation pull request builds SPEC-0001 and finishes the first execution of RUNBOOK-0001.
+     Every task and criterion of SPEC-0001 is verified in it, so it leaves SPEC-0001 `done` (rule 2)
+     and RUNBOOK-0001 `active`.
+
+   RUNBOOK-0002 becomes `active` in the pull request that fixes the first CI failure diagnosed with it,
+   which may be the implementation pull request itself.
+   An AI agent may carry out the first execution of either Runbook while it is still `draft`, following
+   its AI Agent Execution Rules, since that execution is what makes it `active`. From then on, the
+   project keeps these documents current through pull requests, like any other document.
 
 How the framework maps to GitHub:
 
@@ -130,7 +140,7 @@ How the framework maps to GitHub:
 | Owners and contacts | `@login` user | Rule 5 |
 | Document and rule checks | GitHub Actions workflow | Rule 7; ADR-0003; SPEC-0001 |
 | Merge settings and `main` protection | Repository settings and branch protection | ADR-0002; ADR-0003; RUNBOOK-0001 |
-| Documents that ship with doc2gh | The project's own documents | Rule 8 |
+| Documents that ship with doc2gh | The project's own documents, adopted in two pull requests | Rule 8 |
 
 ## Consequences
 
