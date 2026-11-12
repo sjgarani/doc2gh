@@ -10,11 +10,13 @@ This README is the wiki's **schema**: the structure, conventions, and workflows 
 
 | Layer | Path | Owner | Rule |
 | :--- | :--- | :--- | :--- |
-| Raw sources | `raw/` | Humans | Immutable. Agents read them and never modify, rename, or delete them. |
+| Raw sources | `raw/` | Humans | Immutable. Humans choose what goes in, and an agent may copy in, unchanged, a file a human hands it. Agents never modify, rename, or delete them. |
 | Wiki | `pages/`, `index.md`, `log.md` | AI agent, reviewed by humans | The agent creates and updates pages and keeps the index and log in sync. |
 | Schema | This README and the project's agent instructions | Humans and AI agent | Co-evolved as the wiki grows. |
 
 The project's PRDs, RFCs, ADRs, Specs, Runbooks, and code are also sources. The agent reads them where they live and does not copy them into `raw/`.
+
+Wiki changes go through the project's review workflow like any other document change. Each request from a human (an ingest, a query filed back, or a lint pass) is reviewed as one change, with one commit per ingested source.
 
 ---
 
@@ -74,15 +76,17 @@ Start each page from `template.md`. Set `category`, `title`, and `created_at`, t
 - **Citations**: Cite every non-obvious claim inline with a link to its source, and list each source in `sources`:
   - `raw/<file>`: a file in this wiki's `raw/` directory.
   - `PRD-NNNN`, `RFC-NNNN`, `ADR-NNNN`, `SPEC-NNNN`, `RUNBOOK-NNNN`: a project document.
-  - `<repository>@<commit>`: code read at a given commit.
+  - `<repository>@<commit>`: code read at a given commit, with the repository as its hosting platform names it (for example, `owner/name`) and the commit as an abbreviated hash of at least 7 characters.
+  - `<person>, YYYY-MM-DD`: a fact a human stated during an operation, such as an answer in Ingest step 2, when no document records it.
   - A URL, only when the content cannot be kept in `raw/`.
-- **Links**: Use relative Markdown links: `[Name](other-page.md)` between pages, `[Title](../raw/file.pdf)` to sources, and `[ADR-NNNN](../../adrs/NNNN-title.md)` to project documents. They render on Git hosting platforms and in Markdown editors such as Obsidian.
+- **Links**: Use relative Markdown links: `[Name](other-page.md)` between pages, `[Title](../raw/file.pdf)` to sources, `[ADR-NNNN](../../adrs/NNNN-title.md)` to project documents, and the path from the page to a code file, naming the commit in the text, such as ``([`src/app.py`](../../../src/app.py) at 3de0829)``. They render on Git hosting platforms and in Markdown editors such as Obsidian.
 - **Contradictions**: When a newer or more authoritative source settles a conflict, rewrite the page to match it and cite it. Otherwise, keep both claims with their sources in a callout that Lint can find:
   ```markdown
   > [!WARNING]
   > **Contradiction**: [Source A](../raw/a.pdf) states X; [Source B](../raw/b.pdf) states Y.
   ```
-- **Authority**: `approved` PRDs, `accepted` ADRs, Specs in `ready` or a later status, and `active` Runbooks are authoritative for what they cover. A wiki page summarizes and links them and never overrides them. If a source contradicts an `accepted` ADR, flag the contradiction; changing the decision requires a new ADR.
+- **Compliance gaps**: A source that prescribes how things should be (a guide, a standard, a requirement) and a source that shows how they are (code, a measurement) do not contradict each other when they differ. Record the gap, citing both, on the page about the subject or in a `synthesis` page, without a callout. Closing the gap is a requirement change, so it goes to a PRD or a Spec.
+- **Authority**: `approved` PRDs, `accepted` ADRs, Specs in `ready` or a later status, and `active` Runbooks are authoritative for what they cover. A wiki page summarizes and links them and never overrides them: it holds what the document does not, such as its context, rationale, and trade-offs in brief, how it relates to other subjects, and pointers to its rules by number, never copies of the rules. If a source contradicts an `accepted` ADR, flag the contradiction; changing the decision requires a new ADR.
 - **Durable knowledge**: Record mechanisms and facts that stay true. Transient status, such as open tickets, current priorities, and one-off measurements, belongs in the work tracker.
 
 ---
@@ -117,13 +121,20 @@ Start each page from `template.md`. Set `category`, `title`, and `created_at`, t
 
 ## log.md
 
-`log.md` is the chronological record. Entries are appended at the end and never edited. Each entry starts with a fixed prefix, `## [YYYY-MM-DD] <operation> | <title>`, where the operation is `ingest`, `query`, or `lint`, followed by the pages the operation created or updated. Every ingest and lint pass gets an entry. A query gets one when it files a page back into the wiki.
+`log.md` is the chronological record. It starts with a `# Wiki Log` heading. Entries are appended at the end and never edited. Each entry starts with a fixed prefix, `## [YYYY-MM-DD] <operation> | <title>`, where the operation is `ingest`, `query`, or `lint`, followed by the pages the operation created or updated. Every ingest and lint pass gets an entry. A query gets one when it files a page back into the wiki, and an ingest that a query runs gets its own `ingest` entry before the `query` entry. A lint entry's title names what the pass covered (`Whole wiki` or a domain), and an `Open:` line lists what the pass left: data gaps with the sources it proposes, and findings it did not fix.
 
 ```markdown
+# Wiki Log
+
 ## [2026-04-02] ingest | Payment provider API guide
 
 - Created: [payment-provider-api-guide](pages/payment-provider-api-guide.md), [idempotency-keys](pages/idempotency-keys.md)
 - Updated: [payment-gateway](pages/payment-gateway.md), [project-overview](pages/project-overview.md)
+
+## [2026-04-09] lint | Whole wiki
+
+- Updated: [payment-gateway](pages/payment-gateway.md)
+- Open: retry limits of the provider API (propose the provider's support answer as a source)
 ```
 
 The fixed prefix keeps the log greppable. For example, `grep "^## \[" log.md | tail -5` lists the last five entries.
@@ -134,7 +145,7 @@ The fixed prefix keeps the log greppable. For example, `grep "^## \[" log.md | t
 
 ### Ingest
 
-A human adds a file to `raw/` or names a project document or code to ingest. Ingest one source at a time:
+A human adds a file to `raw/`, hands the agent a file to copy there unchanged, or names a project document or code to ingest. Ingest one source at a time:
 
 1. Read the source in full.
 2. Discuss the key takeaways with the human, and agree on what matters before writing.
@@ -147,7 +158,7 @@ A human adds a file to `raw/` or names a project document or code to ingest. Ing
 ### Query
 
 1. Read `index.md`, then the relevant pages.
-2. Consult raw sources only when the pages do not answer the question, then ingest what was missing.
+2. Consult the sources (raw sources, project documents, or code) only when the pages do not answer the question, then ingest what was missing with the full Ingest procedure before answering.
 3. Answer with citations that link to wiki pages and sources. The answer can be prose, a table, a comparison, slides, or a chart.
 4. File valuable answers back into the wiki as `synthesis` or `comparison` pages, then update `index.md` and `log.md`.
 
@@ -157,20 +168,20 @@ Run Lint periodically and after large ingests. Check for and fix:
 
 - **Contradictions** between pages, and unresolved `**Contradiction**` callouts.
 - **Stale claims**: claims that newer sources supersede, or that rely on `archived` PRDs, `rejected` RFCs, `superseded` or `deprecated` ADRs, `archived` Specs, or `deprecated` Runbooks.
-- **Orphan pages**: pages with no inbound links.
+- **Orphan pages**: pages that no other page links to. Links from `index.md` do not count.
 - **Missing pages**: subjects mentioned across several pages that have no page of their own.
 - **Missing cross-references** between related pages.
 - **Index drift and broken links**: every page appears in `index.md` exactly once, and every link resolves.
-- **Frontmatter**: required fields are present, `category` is valid, and every cited source is listed in `sources`.
-- **Data gaps**: questions the wiki cannot answer yet. Propose sources that would fill them and ask the human before fetching anything.
+- **Frontmatter**: every field of `template.md` is present, `category` is valid, and every cited source is listed in `sources`.
+- **Data gaps**: questions the wiki cannot answer yet. Propose sources that would fill them and ask the human before fetching anything; the pass does not wait for the answer.
 
-Record each pass in `log.md`.
+Record each pass in `log.md`, with what it left open.
 
 ---
 
 ## Tooling
 
-The wiki is plain Markdown in Git and needs no tools. Markdown editors such as Obsidian can help with browsing, because their graph view shows hub pages and orphans. For large wikis, a local full-text or hybrid search tool helps the agent find pages beyond what `index.md` lists. Wiki tooling may be added later.
+The wiki is plain Markdown in Git and needs no tools. Markdown editors such as Obsidian can help with browsing, because their graph view shows hub pages and orphans. For large wikis, a local full-text or hybrid search tool helps the agent find pages beyond what `index.md` lists. The mechanical Lint checks (frontmatter fields, `category`, index drift, and broken links) suit a script in the project's CI; the other checks need reading. Wiki tooling may be added later.
 
 ---
 
