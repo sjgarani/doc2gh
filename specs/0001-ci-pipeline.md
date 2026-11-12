@@ -387,12 +387,19 @@ flowchart LR
 - **No `GITHUB_REPOSITORY` and no GitHub `origin`** (for example, a local repository): `check-policy`
   exits with `2` unless it runs with `--offline`.
 - **GitHub API down or rate limit exhausted**: `check-policy` exits with `2`. Re-run once; if it keeps
-  failing, follow [RUNBOOK-0002](../runbooks/0002-diagnose-and-fix-ci-pipeline-failures.md).
+  failing, see the next item.
 - **Commits that cannot be compared** (shallow history, force push): `affects-code` prints `code=true`
   (FR-07).
 - **Merge with a failing required stage, or a direct push to `main`** (both possible without branch
   protection): the run for the push to `main` shows the failure, which is fixed as ADR-0003, rule 7
   describes.
+- **A run that fails**: each violation line names its source document and rule (section 2), and the fix
+  follows that rule; running the same script locally on the same commit reproduces it (AC-08). A
+  failure those lines do not explain, such as one outside the scripts, or one that keeps coming back,
+  calls for a Runbook: the AI agent that diagnosed it proposes one, from `docs/runbooks/template.md`
+  and with the steps it actually used, in the pull request that fixes the failure, or in a pull request
+  of its own when nothing in the repository needed fixing. Since those steps have just been carried
+  out, the Runbook starts `active`, with `last_verified_at` set to that day.
 - **Flaky failure**: record it and investigate. Re-run only failures from outside the code, by hand, and
   at most once per failure; never retry automatically without a limit.
 
@@ -445,9 +452,6 @@ Incremental, verifiable implementation steps:
 - [ ] **Task 6**: Measure the duration of the always-on stages and confirm the NFR-01 targets. If a
   target is missed, record the measurement in the pull request and, in the same pull request, either
   remove the cause or revise NFR-01
-- [ ] **Task 7**: Check that [RUNBOOK-0002](../runbooks/0002-diagnose-and-fix-ci-pipeline-failures.md)
-  matches the scripts and the workflow (job names, violation format, and commands), and fix it where it
-  does not
 
 ## Test & Verification Plan
 

@@ -7,7 +7,7 @@ type: adr
 title: "Use GitHub Actions for CI"
 status: proposed
 created_at: 2026-11-11
-updated_at: 2026-11-11
+updated_at: 2026-11-12
 superseded_by: ""
 # ============================================================================
 deciders:
@@ -131,5 +131,5 @@ Rules:
 - **Forbidden Patterns**: `pull_request_target` together with a checkout; secrets in workflow files;
   actions referenced by a moving ref; merging a pull request with a failing required stage.
 - **Automated Verification**: the policy stage of SPEC-0001 (FR-03) inspects the workflows themselves for
-  rules 2 to 5 (for rule 4, workflows that use `actions/checkout`; other ways of checking out code are left
-  to review).
+  rules 2 to 5 (for rule 4, workflows that use `actions/checkout`). Left to review: rules 1, 6, 7, and 8,
+  and, in rule 4, other ways of checking out code.

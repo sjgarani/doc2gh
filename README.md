@@ -45,7 +45,7 @@ project's own documents, which it accepts, implements, and keeps up to date
 | [ADR-0003](adrs/0003-use-github-actions-for-ci.md) | GitHub Actions on hosted runners, everything CI-related in `ci/`, workflow security rules, required checks, and what happens without branch protection. |
 | [SPEC-0001](specs/0001-ci-pipeline.md) | The CI pipeline: documentation, policy, and summary stages, plus extension points for project stages. |
 | [RUNBOOK-0001](runbooks/0001-configure-the-github-repository.md) | Applying the merge settings and protecting `main`. |
-| [RUNBOOK-0002](runbooks/0002-diagnose-and-fix-ci-pipeline-failures.md) | Tracing a CI failure back to its rule and fixing it. |
+| [RUNBOOK-0002](runbooks/0002-review-a-pull-request-against-the-accepted-adrs.md) | Reviewing a pull request against the accepted ADRs, for the rules no CI stage checks. |
 
 ## Managing `docs/` in a project
 
@@ -123,16 +123,19 @@ is the only direct push to `main` (ADR-0002, rule 8).
    request as a draft (`gh pr create --draft --title "Build the CI pipeline (SPEC-0001)"`). It
    builds [SPEC-0001](specs/0001-ci-pipeline.md), protects `main` once its first run passes
    (SPEC-0001, Task 5), runs the Verification of RUNBOOK-0001, and verifies every criterion in
-   its own runs. Each task is ticked in the commit that completes it. The last commit ticks the
-   acceptance criteria and moves SPEC-0001 to `done` and RUNBOOK-0001 to `active`; once that
-   commit's run passes, the pull request leaves draft (`gh pr ready <pr-number>`), and the person
-   merges it the same way. Its description lists each task and criterion with its evidence, the
-   result of RUNBOOK-0001's Verification, the NFR-01 measurements (SPEC-0001, Task 6), and
-   RUNBOOK-0002 when Task 7 changes it (ADR-0001, rule 4).
+   its own runs. Each task is ticked in the commit that completes it. Once the work is done, the
+   pull request is reviewed with [RUNBOOK-0002](runbooks/0002-review-a-pull-request-against-the-accepted-adrs.md),
+   by an agent that did not write it when the tool allows, and the "must fix" findings are fixed
+   in new commits. The last commit ticks the acceptance criteria and moves SPEC-0001 to `done` and
+   RUNBOOK-0001 and RUNBOOK-0002 to `active`; once that commit's run passes, the pull request
+   leaves draft (`gh pr ready <pr-number>`), and the person merges it the same way. Its
+   description lists each task and criterion with its evidence, the result of RUNBOOK-0001's
+   Verification, the NFR-01 measurements (SPEC-0001, Task 6), and a link to the review
+   (ADR-0001, rule 4).
 
-After the second merge, adoption is complete and no pull request is pending. RUNBOOK-0002
-becomes `active` in the pull request that fixes the first CI failure diagnosed with it, which
-may be the implementation pull request itself (ADR-0001, rule 8).
+After the second merge, adoption is complete: every document that ships with doc2gh is final
+(the ADRs `accepted`, SPEC-0001 `done`, and both Runbooks `active`), and no pull request is
+pending (ADR-0001, rule 8).
 
 `git subtree` refuses to run with uncommitted changes. If it reports
 `prefix 'docs' already exists`, the project already has a `docs/` directory that is not a
@@ -162,8 +165,8 @@ If the pull stops on a conflict, resolve it file by file, then run
 
 - framework files (`README.md`, `template.md`): take doc2gh's version;
 - documents that ship with doc2gh: keep the project's front matter and take doc2gh's new text,
-  then re-apply the project's own changes to the body that the new text does not already cover
-  (such as RUNBOOK-0002 fixes from SPEC-0001, Task 7). Carry ticks over by content, not by number: a task or criterion whose text changed goes back
+  then re-apply the project's own changes to the body that the new text does not already cover.
+  Carry ticks over by content, not by number: a task or criterion whose text changed goes back
   to `[ ]` until a later pull request checks it again (ADR-0001, rule 2).
 
 If a conflict does not fit these rules, run `git merge --abort`.

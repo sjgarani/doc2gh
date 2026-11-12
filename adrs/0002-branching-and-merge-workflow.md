@@ -134,7 +134,8 @@ and checks them.
   requests in English.
 - **Forbidden Patterns**: squash or rebase merges; rebasing a branch that has already been pushed; other
   long-lived branches; direct pushes to `main`.
-- **Automated Verification**: the policy stage of [SPEC-0001](../specs/0001-ci-pipeline.md) checks branch
-  names on pull requests (FR-10) and reads the settings from rules 3 and 4 through the GitHub API (FR-04).
-  RUNBOOK-0001 checks the protection required by rule 8; commit language and the remaining rules are left
-  to review.
+- **Automated Verification**: the policy stage of [SPEC-0001](../specs/0001-ci-pipeline.md) checks the
+  form of branch names on pull requests (rule 2, FR-10) and reads the settings of rules 3 and 4 through
+  the GitHub API (FR-04); RUNBOOK-0001 applies the protection that rule 8 requires. Left to review: rules
+  1, 5, 6, and 7; in rule 2, whether the branch type fits the change; and, without branch protection,
+  direct pushes to `main` (rule 8). Rule 9 leaves its subject to the project's own ADRs.

@@ -113,21 +113,21 @@ Rules:
 7. CI checks the shape of every document (file name, `id`, fields, status, owners, references, and
    links) in the documentation stage of [SPEC-0001](../specs/0001-ci-pipeline.md). ADR rules that can be
    automated become checks, listed in SPEC-0001, and each violation names the ADR it comes from; each
-   ADR's compliance section says which of its rules are left to review.
-8. The documents that ship with doc2gh (ADR-0001 to ADR-0003, SPEC-0001, RUNBOOK-0001 and RUNBOOK-0002)
-   become the project's own documents on adoption, which takes two pull requests:
+   ADR's compliance section says which of its rules are left to review, and
+   [RUNBOOK-0002](../runbooks/0002-review-a-pull-request-against-the-accepted-adrs.md) is how that review is done.
+8. The documents that ship with doc2gh (ADR-0001 to ADR-0003, SPEC-0001, RUNBOOK-0001, and
+   RUNBOOK-0002) become the project's own documents on adoption, which takes two pull requests:
    - the adoption pull request brings doc2gh in, accepts the ADRs, moves SPEC-0001 to `ready`, puts the
      project's people in `deciders` and `owners`, and adds the project's AI agent instruction file. Its
      merge approves them, and no other work starts before it;
-   - the implementation pull request builds SPEC-0001 and finishes the first execution of RUNBOOK-0001.
-     Every task and criterion of SPEC-0001 is verified in it, so it leaves SPEC-0001 `done` (rule 2)
-     and RUNBOOK-0001 `active`.
+   - the implementation pull request builds SPEC-0001, finishes the first execution of RUNBOOK-0001,
+     and is the first pull request reviewed with RUNBOOK-0002. Every task and criterion of SPEC-0001
+     is verified in it, so it leaves SPEC-0001 `done` (rule 2) and both Runbooks `active`.
 
-   RUNBOOK-0002 becomes `active` in the pull request that fixes the first CI failure diagnosed with it,
-   which may be the implementation pull request itself.
-   An AI agent may carry out the first execution of either Runbook while it is still `draft`, following
-   its AI Agent Execution Rules, since that execution is what makes it `active`. From then on, the
-   project keeps these documents current through pull requests, like any other document.
+   After the second merge, every one of these documents is final.
+   An AI agent may carry out the first execution of either Runbook while it is still `draft`,
+   following its AI Agent Execution Rules, since that execution is what makes it `active`. From then
+   on, the project keeps these documents current through pull requests, like any other document.
 
 How the framework maps to GitHub:
 
@@ -137,6 +137,7 @@ How the framework maps to GitHub:
 | Review workflow and status changes | Pull request to `main`, merged with a merge commit | Rule 2; ADR-0002 |
 | Work item | Spec task; optional issue that references the ID | Rule 3 |
 | Review record | Pull request that lists the IDs | Rule 4 |
+| Review of the rules left to review | Review comment on the pull request | Rule 7; RUNBOOK-0002 |
 | Owners and contacts | `@login` user | Rule 5 |
 | Document and rule checks | GitHub Actions workflow | Rule 7; ADR-0003; SPEC-0001 |
 | Merge settings and `main` protection | Repository settings and branch protection | ADR-0002; ADR-0003; RUNBOOK-0001 |
@@ -153,7 +154,7 @@ How the framework maps to GitHub:
 ### Negative / Trade-offs
 - There is no mandatory progress board; progress is read from the Specs or from a board the project
   builds itself.
-- doc2gh's own documents take the first numbers (ADR-0001 to ADR-0003, SPEC-0001, RUNBOOK-0001 and
+- doc2gh's own documents take the first numbers (ADR-0001 to ADR-0003, SPEC-0001, RUNBOOK-0001, and
   RUNBOOK-0002). A project that already uses those numbers has to renumber its documents when it adopts
   doc2gh, and a new doc2gh document may later take a number the project already uses.
 - Project documents share `docs/` with the framework files, and the project edits the documents that
@@ -168,5 +169,6 @@ How the framework maps to GitHub:
   written as `@login`; cross-references by ID.
 - **Forbidden Patterns**: changing a document's status outside a pull request; project documents outside
   `docs/` or in the wiki; the same definition written in two documents.
-- **Automated Verification**: the documentation stage of SPEC-0001 (FR-02). Reviewers check that pull
-  requests list the document IDs and that rule 6 is followed.
+- **Automated Verification**: the documentation stage of SPEC-0001 (FR-02) checks owners (rule 5), that
+  references exist (rule 6), and the shape of every document (rule 7). Left to review: rules 1, 2, 3, 4,
+  and 8, and, in rule 6, that each definition is written once.
