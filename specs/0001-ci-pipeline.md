@@ -84,8 +84,10 @@ tests.
   - every relative link resolves (link rule in section 2).
 
   Files that are not `*.md`, subdirectories of a type directory, and files outside the type directories
-  (such as `<docs>/README.md`) are not examined. A missing type directory, `README.md`, `template.md`, or
-  lifecycle table is a violation. A missing `<docs>` directory is an execution error (exit `2`).
+  (such as `<docs>/README.md`) are not examined. This leaves out the LLM Wiki in `<docs>/wiki/`, whose
+  pages have no ID, number, or status; the [Lint](../wiki/README.md#lint) operation of its schema checks
+  their front matter and links. A missing type directory, `README.md`, `template.md`, or lifecycle table
+  is a violation. A missing `<docs>` directory is an execution error (exit `2`).
 
   Every FR-02 violation names SPEC-0001 as its source, except the owner check, which names ADR-0001. A
   duplicated number or `id` is reported on each file involved. A document whose front matter does not
@@ -379,6 +381,9 @@ flowchart LR
   (ADR-0003, rule 4). The read-only `GITHUB_TOKEN` still reaches `check-policy` (NFR-04).
 - **Framework files** (each type's `README.md` and `template.md`, and the files at the root of
   `<docs>`): not examined at all, neither metadata nor links (FR-02).
+- **LLM Wiki** (everything under `<docs>/wiki/`, its `README.md` and `template.md` included): not
+  examined (FR-02). A pull request that only changes the wiki is a documentation-only pull request
+  (FR-07).
 - **Documentation-only pull request**: the slow stages do not run, and the summary shows them as
   `skipped (code not affected)`.
 - **Stage with nothing to check yet**: succeeds and says there is nothing to check (FR-08).
