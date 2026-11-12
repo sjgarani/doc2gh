@@ -68,8 +68,7 @@ tests.
   - `type` matches the directory (`prd`, `rfc`, `adr`, `spec`, or `runbook`);
   - every front matter field in the type's `template.md` is present;
   - the status is listed in the type's lifecycle table: the first table in the `README.md` section whose
-    heading starts with `## Lifecycle` (English framework) or `## Ciclo de vida` (Portuguese framework),
-    taking the backticked value in the first column of each row;
+    heading starts with `## Lifecycle`, taking the backticked value in the first column of each row;
   - `created_at` and `updated_at` are valid `YYYY-MM-DD` dates, `updated_at` is not earlier than
     `created_at`, and `last_verified_at`, where the type's template has it, is empty or a valid date;
   - every ID in `related_*`, `supersedes`, and `superseded_by` matches

@@ -55,9 +55,7 @@ SPEC-0001 checks expect the document types in `docs/<type>/`.
 
 ### Rules
 
-- Pick the branch for your language, `main` for English or `pt_BR` for Brazilian Portuguese,
-  and keep using it for every update. Unless told otherwise, an AI agent picks the language the
-  person writes to it in.
+- Adopt and update from doc2gh's `main` branch.
 - Always pass `--squash`, so each adoption or update adds a single commit of doc2gh content
   to the project's history.
 - Each adoption or update gets a pull request of its own, from a `chore/` branch, holding only
