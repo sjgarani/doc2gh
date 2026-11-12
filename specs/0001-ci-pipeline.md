@@ -437,7 +437,7 @@ Incremental, verifiable implementation steps:
 - [ ] **Task 5**: When the plan allows branch protection, register the required stages as required status
   checks on `main` (RUNBOOK-0001)
 - [ ] **Task 6**: Measure the duration of the always-on stages and confirm the NFR-01 targets
-- [x] **Task 7**: Write the Runbook for diagnosing pipeline failures
+- [ ] **Task 7**: Write the Runbook for diagnosing pipeline failures
   ([RUNBOOK-0002](../runbooks/0002-diagnose-and-fix-ci-pipeline-failures.md))
 
 ## Test & Verification Plan
