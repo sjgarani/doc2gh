@@ -76,8 +76,10 @@ license: it covers the files that come from doc2gh, not the project.
 
 Adoption takes two pull requests, and the person adopting doc2gh only has to merge them
 ([ADR-0001](adrs/0001-link-the-documentation-framework-to-github.md), rule 8). It needs `gh`
-authenticated (`gh auth status`) as an admin of the repository, and `main` on GitHub with at
-least one commit. A new project starts with `git init -b main` and a first commit (a
+authenticated (`gh auth status`) as an admin of the repository with the `repo` scope (if
+`gh auth status` shows `GITHUB_TOKEN` with a `ghu_` integration token, as in GitHub Codespaces,
+run `unset GITHUB_TOKEN && gh auth login -s repo` in that shell first), and `main` on GitHub
+with at least one commit. A new project starts with `git init -b main` and a first commit (a
 `README.md`, for example), then creates the repository with
 `gh repo create <owner>/<repo> --private --source . --push` (or `--public`); that first commit
 is the only direct push to `main` (ADR-0002, rule 8).
@@ -134,7 +136,8 @@ is the only direct push to `main` (ADR-0002, rule 8).
       [RUNBOOK-0002](runbooks/0002-review-a-pull-request-against-the-accepted-adrs.md), by an
       agent that did not write it when the tool allows. That review is the Runbook's first
       execution. "Must fix" findings are fixed in new commits, which get a new review (RUNBOOK-0002,
-      Triggers), until a review has none. The description links every review.
+      Triggers), until a review has none. Each review is linked in the description once it is
+      posted.
    3. Once the last review has no "must fix" finding and its head's run passes, the pull request
       leaves draft (`gh pr ready <pr-number>`), and the person merges it the same way.
 
@@ -174,10 +177,14 @@ If the pull stops on a conflict, resolve it file by file, then run
 `git add docs && git commit --no-edit --cleanup=strip`:
 
 - framework files (`README.md`, `template.md`): take doc2gh's version;
-- documents that ship with doc2gh: keep the project's front matter and take doc2gh's new text,
-  then re-apply the project's own changes to the body that the new text does not already cover.
-  Carry ticks over by content, not by number: a task or criterion whose text changed goes back
-  to `[ ]` until a later pull request checks it again (ADR-0001, rule 2).
+- documents that ship with doc2gh: keep the project's front matter (with today's date in
+  `updated_at`, and `status: in-progress` on SPEC-0001 when the update leaves any task or
+  criterion unticked) and take doc2gh's new text, then re-apply the project's own changes to the
+  body that the new text does not already cover. Carry ticks over by content, not by number: a
+  task or criterion whose text changed goes back to `[ ]` until a later pull request checks it
+  again (ADR-0001, rule 2). When the pull merged cleanly but added an unticked task or criterion
+  to SPEC-0001, move SPEC-0001 to `in-progress` in a separate commit on the branch (ADR-0002,
+  rule 6).
 
 If a conflict does not fit these rules, run `git merge --abort`.
 
@@ -250,7 +257,8 @@ It is optional, and adoption creates no pages.
   ([ADR-0002](adrs/0002-branching-and-merge-workflow.md), rule 2), and its merge approves the
   pages ([ADR-0001](adrs/0001-link-the-documentation-framework-to-github.md), rule 2).
 - The agent discusses the takeaways of Ingest step 2 with the person before writing, and cites a
-  fact the person settles there as `@login, YYYY-MM-DD` (ADR-0001, rule 5).
+  fact the person settles there as `@login, YYYY-MM-DD` (ADR-0001, rule 5), quoted in `sources`
+  (`"@login, YYYY-MM-DD"`).
 - The documentation stage checks the pages' file names, front matter, links, and index entries
   ([SPEC-0001](specs/0001-ci-pipeline.md), FR-11); the rest of Lint stays with the agent.
   RUNBOOK-0002 reviews a wiki pull request only when a person asks for it.

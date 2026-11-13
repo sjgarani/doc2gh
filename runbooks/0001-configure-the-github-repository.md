@@ -7,7 +7,7 @@ type: runbook
 title: "Configure the GitHub repository"
 status: draft
 created_at: 2026-11-11
-updated_at: 2026-11-12
+updated_at: 2026-11-13
 last_verified_at: ""
 # ============================================================================
 owners:
@@ -39,7 +39,9 @@ tags: [github, settings, branch-protection]
 ## Prerequisites
 
 - **Access & Permissions**: admin role on the repository.
-- **Tools**: `gh`, authenticated (`gh auth status`) with the `repo` scope.
+- **Tools**: `gh`, authenticated (`gh auth status`) with the `repo` scope (if `gh auth status`
+  shows `GITHUB_TOKEN` with a `ghu_` integration token, as in GitHub Codespaces, run
+  `unset GITHUB_TOKEN && gh auth login -s repo` in that shell first).
 - **Approvals**: agreement from the repository owner before Steps 2 and 4, which change the rules for
   every collaborator. One agreement, given before Step 2, covers both steps of the same execution;
   during adoption, the request to adopt doc2gh is that agreement.
@@ -73,8 +75,9 @@ Execute the steps in order. If a result differs from the **Expected result**, st
   the current protection, `Branch not protected` (HTTP 404), or "Upgrade to GitHub Pro or make this
   repository public to enable this feature." (HTTP 403); note which one. With 404 or 403, `gh`
   exits with status 1, so run the two calls separately rather than chained with `&&`.
-- **On failure**: missing or `null` merge fields mean you lack admin rights; see
-  [Escalation](#escalation).
+- **On failure**: missing or `null` merge fields mean you lack admin rights, and
+  `Resource not accessible by integration` (HTTP 403) on the second call means `gh` is using an
+  integration token without the `repo` scope (see **Tools**); see [Escalation](#escalation).
 
 ### Step 2: Apply the merge settings
 
@@ -107,8 +110,8 @@ Execute the steps in order. If a result differs from the **Expected result**, st
 
 ### Step 4: Protect `main`
 
-- **Command**: set `contexts` to the display names of the required stages (SPEC-0001, Technical Design,
-  section 2), plus any stages the project has made required.
+- **Command**: set `contexts` to the display names of the required stages and `Summary` (SPEC-0001,
+  Technical Design, section 2), plus any stages the project has made required.
   ```bash
   gh api -X PUT repos/<owner>/<repo>/branches/main/protection --input - <<'EOF'
   {

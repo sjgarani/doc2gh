@@ -7,7 +7,7 @@ type: runbook
 title: "Review a pull request against the accepted ADRs"
 status: draft
 created_at: 2026-11-12
-updated_at: 2026-11-12
+updated_at: 2026-11-13
 last_verified_at: ""
 # ============================================================================
 owners:
@@ -89,9 +89,9 @@ Execute the steps in order. If a result differs from the **Expected result**, st
 - **Expected result**: the `accepted` ADRs on `main`. Read each one's rules (**Decision Outcome**) and
   its **Compliance & Validation** section, whose **Automated Verification** says which rules a CI stage
   checks and which are left to review; the review covers the latter. A pull request that changes an ADR is reviewed against
-  the version on `main`. Also read every Spec and Runbook whose ID the description lists or whose
-  file the pull request changes, and the framework files whose rules apply: the **AI Agent Guidance**
-  of `docs/README.md` and of the README of each document type the pull request touches, and
+  the version on `main`. Also read every document whose ID the description lists or whose
+  file the pull request changes, and the framework files whose rules apply: `docs/README.md`,
+  the `README.md` of each document type the pull request touches, and
   `docs/wiki/README.md` when it changes the wiki.
 - **On failure**: no accepted ADR on `main` means there is nothing to review against; post a review
   that says so (Step 5).

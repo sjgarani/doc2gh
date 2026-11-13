@@ -7,7 +7,7 @@ type: spec
 title: "CI pipeline"
 status: draft
 created_at: 2026-11-11
-updated_at: 2026-11-12
+updated_at: 2026-11-13
 # ============================================================================
 owners:
   - "@sjgarani"
@@ -73,13 +73,13 @@ tests.
     heading starts with `## Lifecycle`, taking the backticked value in the first column of each row;
   - `created_at` and `updated_at` are valid `YYYY-MM-DD` dates, `updated_at` is not earlier than
     `created_at`, and `last_verified_at`, where the type's template has it, is empty or a valid date;
-  - every ID in `related_*`, `supersedes`, and `superseded_by` matches
+  - every ID in `related_*`, `supersedes`, and, when set, `superseded_by` matches
     `^(PRD|RFC|ADR|SPEC|RUNBOOK)-[0-9]{4}$` and exists;
   - an ADR is `superseded` if and only if `superseded_by` is set;
   - an `active` Runbook has `last_verified_at` set;
-  - every item in `deciders` and `owners` is a GitHub login written as `@login`, matching
-    `^@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$` ([ADR-0001](../adrs/0001-link-the-documentation-framework-to-github.md),
-    rule 5);
+  - every item in `deciders`, `owners`, `authors`, `reviewers`, and `stakeholders` is a GitHub login
+    written as `@login`, matching `^@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$`
+    ([ADR-0001](../adrs/0001-link-the-documentation-framework-to-github.md), rule 5);
   - the first line after the front matter, outside fenced code blocks, that starts with `# ` equals
     `# <id>: <title>`, with backticks removed from both;
   - every relative link resolves (link rule in section 2).
@@ -184,8 +184,8 @@ tests.
     `created_at`;
   - every relative link resolves (link rule in section 2);
   - `<docs>/wiki/index.md` links to it exactly once, counting every link the link rule considers that
-    resolves to the page. The violation is located at the page, and its message gives the lines of
-    `index.md`.
+    resolves to the page. The violation is located at the page, and its message names `index.md` and,
+    when `index.md` links to the page more than once, gives the lines of `index.md`.
 
   `<docs>/wiki/index.md` and `<docs>/wiki/log.md` have no front matter; when they exist, every relative
   link in them resolves. When `pages/` exists, a missing `index.md`, wiki `README.md`, `template.md`, or
@@ -226,7 +226,8 @@ Nothing is persisted and no artifacts are published.
 
 **Front matter**: the lines between a first line holding `---` and the next line holding `---`. Allowed
 lines: blank lines; comments (a line whose first non-blank character is `#`); `key: value`, where the value
-is unquoted or wrapped in single or double quotes; `key: [a, b]`, a flow list of such values; and `key:`
+is unquoted or wrapped in single or double quotes; `key: [a, b]`, a flow list of such values (where an
+unquoted item contains no `,`, `[`, or `]`); and `key:`
 with nothing after it, followed by zero or more `  - value` lines, forming a block list (empty when no
 item follows). Anything else is a violation reported on its line: nested maps, multi-line values, a
 repeated key, a list item outside a list, or a missing closing `---`, reported on
@@ -496,8 +497,9 @@ Incremental, verifiable implementation steps:
 - **Unit Tests**: every `check-docs` and `check-policy` rule, the wiki checks (FR-11) included, with
   valid and invalid cases in temporary repositories created by the tests; the front matter subset,
   including its invalid forms; the link rule;
-  `check-policy` against a local fake API (settings readable, hidden, and mismatched); `affects-code` with
-  each event type, matching and non-matching paths, empty or all-zero `BASE`, and a failing `git diff`;
+  `check-policy` against a local fake API (settings readable, hidden, and mismatched); where `affects-code`
+  exists, each event type, matching and non-matching paths, empty or all-zero `BASE`, and a failing
+  `git diff`;
   `summary` with passed, failed, cancelled, missing, gated-and-skipped, and skipped-for-another-reason
   stages.
 - **Integration / E2E Tests**: the runs of the pull request that implements this Spec. No pull request

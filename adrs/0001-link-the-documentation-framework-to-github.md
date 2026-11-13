@@ -7,7 +7,7 @@ type: adr
 title: "Link the documentation framework to GitHub"
 status: proposed
 created_at: 2026-11-11
-updated_at: 2026-11-12
+updated_at: 2026-11-13
 superseded_by: ""
 # ============================================================================
 deciders:
@@ -91,7 +91,8 @@ Rules:
    are written in English.
 2. The project's review workflow is a pull request to `main` (ADR-0002). New documents, content changes,
    and status changes all go through a pull request, and the merge records the review. No document
-   reaches an approval status (`approved`, `accepted`, `ready`, or `active`) without one. The pull
+   reaches an approval status (`approved`, `accepted`, `ready`, or `active`) without one; a pull request
+   that submits a document for approval already carries that status, since its merge is the approval. The pull
    request that implements a Spec, whether or not it also writes it, carries the status the work ends
    with: `done` when every task and criterion is met, `in-progress` otherwise; a Spec implemented in one
    pull request needs no other pull request for its status. A task is ticked in the pull request that
@@ -104,9 +105,11 @@ Rules:
 4. Every pull request lists in its description the IDs of the documents it creates, changes, or
    implements, along with the requirement or task when there is one (for example, "SPEC-0001, Task 2").
    The title may end with the main ID in parentheses.
-5. Owners (`deciders`, `owners`) and escalation contacts are GitHub users, written as `@login`.
-6. Documents refer to each other by ID: in the `related_*`, `supersedes`, and `superseded_by` fields, and
-   with a relative link in the text. Each definition is written once, in the document that owns it;
+5. Owners and participants (`deciders`, `owners`, `authors`, `reviewers`, `stakeholders`) and escalation
+   contacts are GitHub users, written as `@login`.
+6. Documents refer to each other by ID: in the `related_*`, `supersedes`, and `superseded_by` fields, and,
+   when the target document already exists, with a relative link in the text. Each definition is written
+   once, in the document that owns it;
    other documents cite it by ID and rule or requirement number (for example, "ADR-0003, rule 6")
    instead of restating it. A citation may name what it cites in a few words, but does not repeat its
    conditions or values. When the type's front matter has no field for a reference (a Spec that
